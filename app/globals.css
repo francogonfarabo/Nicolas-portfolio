@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Tokens. White, hairlines, one sharp accent. Type: Geist + Geist Mono.
+------------------------------------------------------------------- */
+@theme {
+  --color-bg: #ffffff;
+  --color-bg-2: #fafafa;
+  --color-surface: #f4f4f5;
+  --color-line: #ebebeb;
+  --color-line-2: #d9d9d9;
+  --color-ink: #0a0a0a;
+  --color-ink-2: #525252;
+  --color-ink-3: #737373;
+  --color-accent: #ff4f00;
+  --color-accent-ink: #c2410c;
+  --color-plus: #15803d;
+  --color-minus: #b91c1c;
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The pinned skills map: chart area height, and the whole pinned block (title bar + padding). */
+:root {
+  color-scheme: light;
+  --header-h: 48px;
+  --chart-area: clamp(240px, 36svh, 290px);
+  --panel-h: calc(var(--chart-area) + 64px);
+}
+@media (min-width: 640px) {
+  :root {
+    --chart-area: clamp(300px, 50svh, 500px);
+    --panel-h: calc(var(--chart-area) + 50px);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: calc(var(--header-h) + 8px);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+::selection {
+  background: #ffe2d4;
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+/* Chart nodes draw their own focus ring */
+svg [role="slider"]:focus-visible {
+  outline: none;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mono meta label, used everywhere for the "spec sheet" voice */
+.meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+/* Faint engineering grid behind the chart */
+.dot-grid {
+  background-image: radial-gradient(circle at 1px 1px, #e4e4e4 1px, transparent 0);
+  background-size: 16px 16px;
+}
+
+/* Corner registration marks on a panel */
+.ticks {
+  position: relative;
+}
+.ticks::before,
+.ticks::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: var(--color-ink);
+  pointer-events: none;
+}
+.ticks::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+.ticks::after {
+  right: -1px;
+  bottom: -1px;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  vertical-align: -0.18em;
+  background: currentColor;
+  animation: caret 1.1s steps(1) infinite;
+}
+
+@keyframes ping-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+.chart-ping {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ping-ring 1s var(--ease-out-soft) 3;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

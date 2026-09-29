@@ -3,9 +3,11 @@
 /** Sanity Studio, embedded at /studio. */
 import { visionTool } from "@sanity/vision";
 import { defineConfig } from "sanity";
+import { presentationTool } from "sanity/presentation";
 import { structureTool } from "sanity/structure";
 import { apiVersion, dataset, projectId } from "./sanity/env";
 import { schemaTypes, singletonTypes } from "./sanity/schemaTypes";
+import { resolve } from "./sanity/presentation";
 import { structure } from "./sanity/structure";
 
 const singletons = new Set<string>(singletonTypes);
@@ -18,6 +20,15 @@ export default defineConfig({
   dataset,
   plugins: [
     structureTool({ structure, title: "Content" }),
+    // Live preview of the site next to the form, with click-to-edit on text.
+    presentationTool({
+      title: "Preview",
+      resolve,
+      previewUrl: {
+        initial: "/",
+        previewMode: { enable: "/api/draft-mode/enable", disable: "/api/draft-mode/disable" },
+      },
+    }),
     ...(process.env.NODE_ENV === "development" ? [visionTool({ defaultApiVersion: apiVersion })] : []),
   ],
   schema: {

@@ -1,5 +1,6 @@
+import { draftMode } from "next/headers";
 import { defineQuery } from "next-sanity";
-import { client } from "@/sanity/client";
+import { client, readToken } from "@/sanity/client";
 import { profile as localProfile, work as localWork } from "@/content/cv";
 import { skills as localSkills } from "@/content/skills";
 import { gallery as localGallery } from "@/content/gallery";
@@ -71,11 +72,38 @@ async function getRaw(): Promise<Raw & { source: SiteContent["source"] }> {
   const local: Raw = { profile: localProfile, work: localWork, skills: localSkills, gallery: localGallery };
   if (!client) return { ...local, source: "local" };
 
+  let isDraft = false;
+  try {
+    isDraft = (await draftMode()).isEnabled;
+  } catch {
+    // Outside a request (static build): published content.
+  }
+
   let data: any;
   try {
-    // Dev: always fresh, so Studio edits show on refresh. Prod: refreshed at most every 60s.
-    const revalidate = process.env.NODE_ENV === "development" ? 0 : 60;
-    data = await client.fetch(QUERY, {}, { next: { revalidate, tags: ["sanity"] } });
+    if (isDraft && readToken) {
+      // Studio preview: unpublished drafts, uncached, with invisible click-to-edit markers.
+      data = await client.fetch(QUERY, {}, {
+        perspective: "drafts",
+        token: readToken,
+        useCdn: false,
+        cache: "no-store",
+        stega: {
+          enabled: true,
+          studioUrl: "/studio",
+          // Only translatable text. Not skill labels (the chart measures them for layout) nor alt text.
+          filter: ({ sourcePath, sourceDocument }) => {
+            if (sourceDocument?._type === "skills" || sourcePath.includes("alt")) return false;
+            const last = sourcePath.at(-1);
+            return last === "en" || last === "es";
+          },
+        },
+      });
+    } else {
+      // Dev: always fresh, so Studio edits show on refresh. Prod: refreshed at most every 60s.
+      const revalidate = process.env.NODE_ENV === "development" ? 0 : 60;
+      data = await client.fetch(QUERY, {}, { next: { revalidate, tags: ["sanity"] } });
+    }
   } catch (err) {
     console.warn("[content] Sanity fetch failed, using local content:", (err as Error).message);
     return { ...local, source: "local" };

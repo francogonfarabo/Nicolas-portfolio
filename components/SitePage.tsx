@@ -8,6 +8,7 @@ import Gallery from "./Gallery";
 import Footer from "./Footer";
 import ConsoleHello from "./ConsoleHello";
 import { I18nProvider } from "./I18n";
+import PreviewBar from "./PreviewBar";
 
 export async function siteMetadata(locale: Locale): Promise<Metadata> {
   const { profile } = await getContent(locale);
@@ -40,6 +41,7 @@ export default async function SitePage({ locale }: { locale: Locale }) {
       </main>
       <Footer profile={content.profile} locale={locale} />
       <ConsoleHello name={content.profile.shortName} />
+      <PreviewBar locale={locale} />
     </I18nProvider>
   );
 }

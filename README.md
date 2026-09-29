@@ -31,6 +31,18 @@ Open `/studio` and sign in with the Sanity account that owns the project. There 
 - **Adding people:** invite editors at https://www.sanity.io/manage/project/tqm0fcg9.
 - **Deploying the site:** add your production domain as a CORS origin with credentials, either in the Sanity manage page or with `npx sanity cors add https://your-domain --credentials`.
 
+### Live preview
+
+In the Studio, open **Preview** in the top bar to see the site next to the form. It shows unpublished changes as you type. Click any translatable text in the preview to jump to its field. Use the URL bar in the preview to switch between `/` (English) and `/es` (Español).
+
+It needs a read-only **Viewer** token, set once:
+
+1. **Create it:** https://www.sanity.io/manage/project/tqm0fcg9/api → Tokens → *Add API token* → name "Preview", permission **Viewer**. Or run `npx sanity tokens add "Preview" --role viewer` in this folder.
+2. **Vercel:** Project → Settings → Environment Variables → add `SANITY_API_READ_TOKEN` = the token (Production, and Preview if you like), then redeploy.
+3. **Local (optional):** create `.env.local` with `SANITY_API_READ_TOKEN=…` and restart `npm run dev`.
+
+Keep it server-only (never `NEXT_PUBLIC_`). It's never sent to visitors.
+
 ### English / Español
 
 The site is bilingual: `/` is English and `/es` is Spanish, with an EN · ES switch in the header.

@@ -14,12 +14,12 @@ import { pathToFileURL } from "node:url";
 import { profile, work } from "../content/cv";
 import { skills } from "../content/skills";
 import { gallery } from "../content/gallery";
-import type { Img } from "../content/types";
+import type { L, RawImg } from "../content/types";
 
 let n = 0;
 const key = () => `k${(++n).toString(36).padStart(4, "0")}`;
 
-const image = (img: Img | undefined, extra: Record<string, unknown> = {}) =>
+const image = (img: RawImg | undefined, extra: Record<string, unknown> = {}) =>
   img && {
     _type: "image",
     _sanityAsset: `image@${img.src}`,
@@ -27,6 +27,10 @@ const image = (img: Img | undefined, extra: Record<string, unknown> = {}) =>
     alt: img.alt,
     ...extra,
   };
+
+/** Translatable values in arrays need a type and key in Sanity. */
+const locItems = (items: L[] | undefined, type: "localeString" | "localeText") =>
+  items?.map((x) => ({ _type: type, _key: key(), ...x }));
 
 const cvPath = pathToFileURL(resolve("public", profile.cvUrl?.replace(/^\//, "") ?? "")).href;
 
@@ -51,8 +55,14 @@ const docs = [
   {
     _id: "work",
     _type: "work",
-    roles: work.roles.map((r) => ({ _type: "role", _key: key(), ...r })),
-    projects: work.projects.map((p) => ({ _type: "project", _key: key(), ...p })),
+    roles: work.roles.map((r) => ({
+      _type: "role",
+      _key: key(),
+      ...r,
+      paragraphs: locItems(r.paragraphs, "localeText"),
+      clients: locItems(r.clients, "localeString"),
+    })),
+    projects: work.projects.map((p) => ({ _type: "project", _key: key(), ...p, bullets: locItems(p.bullets, "localeText") })),
     certificates: work.certificates.map((c) => ({ _type: "certificate", _key: key(), ...c })),
     education: work.education,
     languages: work.languages.map((l) => ({ _type: "language", _key: key(), ...l })),

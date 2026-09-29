@@ -1,6 +1,8 @@
-import type { Profile } from "@/content/types";
+import type { Locale, Profile } from "@/content/types";
+import { dictionaries, paths } from "@/lib/i18n";
 
-export default function Header({ profile }: { profile: Profile }) {
+export default function Header({ profile, locale }: { profile: Profile; locale: Locale }) {
+  const t = dictionaries[locale];
   const initials = profile.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -11,24 +13,27 @@ export default function Header({ profile }: { profile: Profile }) {
   return (
     <header className="sticky top-0 z-50 h-(--header-h) border-b border-line bg-white/85 backdrop-blur-md">
       <div className="mx-auto flex h-full max-w-3xl items-center justify-between gap-4 px-4 sm:px-6">
-        <a href="#top" className="flex min-w-0 shrink-0 items-center gap-3" aria-label={`${profile.name}, back to top`}>
+        <a href="#top" className="flex min-w-0 shrink-0 items-center gap-3" aria-label={t.nav.backToTop(profile.name)}>
           <span className="grid h-6 shrink-0 place-items-center border border-ink px-1.5 font-mono text-[10px] leading-none font-medium tracking-wider">
             {initials}
           </span>
-          <span className="hidden truncate text-[13px] font-medium sm:inline">{profile.name}</span>
+          <span className="hidden truncate text-[13px] font-medium md:inline">{profile.name}</span>
         </a>
-        <nav aria-label="Contact" className="flex items-center gap-1 font-mono text-[11px] tracking-wide uppercase">
-          <HeaderLink href="#work">Work</HeaderLink>
-          <HeaderLink href="#photos">Photos</HeaderLink>
+        <nav aria-label={t.nav.contact} className="flex items-center gap-1 font-mono text-[11px] tracking-wide uppercase">
+          <HeaderLink href="#work">{t.nav.work}</HeaderLink>
+          <HeaderLink href="#photos" className="max-sm:hidden">
+            {t.nav.photos}
+          </HeaderLink>
           <span aria-hidden className="mx-1 hidden h-4 w-px bg-line-2 sm:block" />
           <HeaderLink href={`mailto:${profile.email}`} className="max-sm:hidden">
-            Email
+            {t.nav.email}
           </HeaderLink>
           {profile.linkedin && (
-            <HeaderLink href={profile.linkedin} external className="max-sm:hidden">
-              LinkedIn
+            <HeaderLink href={profile.linkedin} external newTab={t.newTab} className="max-sm:hidden">
+              {t.nav.linkedin}
             </HeaderLink>
           )}
+          <LanguageSwitch locale={locale} label={t.nav.language} />
           {profile.cvUrl && (
             <a
               href={profile.cvUrl}
@@ -47,15 +52,47 @@ export default function Header({ profile }: { profile: Profile }) {
   );
 }
 
+function LanguageSwitch({ locale, label }: { locale: Locale; label: string }) {
+  const langs = [
+    { id: "en" as const, short: "EN", name: "English" },
+    { id: "es" as const, short: "ES", name: "Español" },
+  ];
+  return (
+    <div role="group" aria-label={label} className="mx-1 flex items-center border border-line">
+      {langs.map((l) =>
+        l.id === locale ? (
+          <span key={l.id} aria-current="true" className="bg-surface px-1.5 py-1 text-ink" title={l.name}>
+            {l.short}
+          </span>
+        ) : (
+          <a
+            key={l.id}
+            href={paths[l.id]}
+            hrefLang={l.id}
+            lang={l.id}
+            title={l.name}
+            aria-label={l.name}
+            className="px-1.5 py-1 text-ink-3 transition-colors hover:text-ink"
+          >
+            {l.short}
+          </a>
+        ),
+      )}
+    </div>
+  );
+}
+
 function HeaderLink({
   href,
   children,
   external,
+  newTab,
   className = "",
 }: {
   href: string;
   children: React.ReactNode;
   external?: boolean;
+  newTab?: string;
   className?: string;
 }) {
   return (
@@ -66,7 +103,7 @@ function HeaderLink({
     >
       {children}
       {external && <span aria-hidden>↗</span>}
-      {external && <span className="sr-only"> (opens in a new tab)</span>}
+      {external && <span className="sr-only"> {newTab}</span>}
     </a>
   );
 }

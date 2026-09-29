@@ -1,4 +1,5 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
+import { englishRequired } from "./locale";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
@@ -18,7 +19,7 @@ export const skills = defineType({
           type: "object",
           name: "category",
           fields: [
-            defineField({ name: "label", type: "string", validation: (r) => r.required() }),
+            defineField({ name: "label", type: "localeString", validation: (r) => r.custom(englishRequired) }),
             defineField({
               name: "color",
               type: "string",
@@ -34,7 +35,12 @@ export const skills = defineType({
                   type: "object",
                   name: "skill",
                   fields: [
-                    defineField({ name: "label", type: "string", validation: (r) => r.required() }),
+                    defineField({
+                      name: "label",
+                      type: "localeString",
+                      description: "Tool names usually stay the same in Spanish; leave Español empty to reuse the English.",
+                      validation: (r) => r.custom(englishRequired),
+                    }),
                     defineField({
                       name: "key",
                       type: "string",
@@ -55,7 +61,7 @@ export const skills = defineType({
                     }),
                   ],
                   preview: {
-                    select: { title: "label", value: "value", key: "key" },
+                    select: { title: "label.en", value: "value", key: "key" },
                     prepare: ({ title, value, key }) => ({ title, subtitle: `${value} · ${key}` }),
                   },
                 }),
@@ -63,7 +69,7 @@ export const skills = defineType({
             }),
           ],
           preview: {
-            select: { title: "label", skills: "skills", color: "color" },
+            select: { title: "label.en", skills: "skills", color: "color" },
             prepare: ({ title, skills, color }) => ({
               title,
               subtitle: `${color} · ${(skills ?? []).length} skills`,
@@ -82,9 +88,9 @@ export const skills = defineType({
           name: "ring",
           fields: [
             defineField({ name: "value", type: "number", validation: (r) => r.required().min(1).max(100) }),
-            defineField({ name: "label", type: "string" }),
+            defineField({ name: "label", type: "localeString" }),
           ],
-          preview: { select: { title: "label", subtitle: "value" } },
+          preview: { select: { title: "label.en", subtitle: "value" } },
         }),
       ],
     }),

@@ -4,10 +4,12 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Gallery as GalleryData } from "@/content/types";
+import { useI18n } from "./I18n";
 
 const idx = (i: number) => String(i + 1).padStart(2, "0");
 
 export default function Gallery({ gallery }: { gallery: GalleryData }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState<number | null>(null);
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
   const photos = gallery.photos;
@@ -27,12 +29,12 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 id="photos-title" className="meta !text-ink">
-              {gallery.title ?? "Photography"}
+              {gallery.title ?? t.gallery.title}
               <span className="ml-2 text-ink-3 tabular">[{idx(photos.length - 1)}]</span>
             </h2>
             {gallery.intro && <p className="mt-2 max-w-md text-[14px] text-ink-2">{gallery.intro}</p>}
           </div>
-          <p className="font-mono text-[11px] text-ink-3">select a frame to view</p>
+          <p className="font-mono text-[11px] text-ink-3">{t.gallery.hint}</p>
         </div>
 
         <JustifiedGrid ratios={photos.map((p) => p.width / p.height)}>
@@ -48,7 +50,7 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
                   type="button"
                   onClick={() => setOpen(i)}
                   className="block w-full cursor-zoom-in text-left"
-                  aria-label={`Open photo ${idx(i)}: ${p.title}`}
+                  aria-label={t.gallery.open(idx(i), p.title)}
                 >
                   <span className="relative block overflow-hidden bg-surface" style={{ aspectRatio: ratio }}>
                     <Image
@@ -172,6 +174,7 @@ function Lightbox({
   onClose: () => void;
 }) {
   const reduce = useReducedMotion();
+  const { t } = useI18n();
   const p = photos[index];
   const ratio = p.width / p.height;
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -216,7 +219,7 @@ function Lightbox({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={`Photo ${index + 1} of ${photos.length}: ${p.title}`}
+      aria-label={t.gallery.dialog(index + 1, photos.length, p.title)}
       className="fixed inset-0 z-[70] flex flex-col bg-[#0a0a0a] text-white"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -235,7 +238,7 @@ function Lightbox({
           {idx(index)} / {idx(photos.length - 1)}
         </span>
         <button ref={closeRef} type="button" onClick={onClose} className="px-2 py-1 text-white/80 transition-colors hover:bg-white/10 hover:text-white">
-          close [esc]
+          {t.gallery.close}
         </button>
       </div>
 
@@ -257,12 +260,12 @@ function Lightbox({
       </div>
 
       <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-t border-white/10 px-4 font-mono text-[11px] sm:px-6">
-        <button type="button" onClick={() => go(-1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label="Previous photo">
-          ← prev
+        <button type="button" onClick={() => go(-1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label={t.gallery.prevLabel}>
+          {t.gallery.prev}
         </button>
         <p className="truncate text-white/90">{p.title}</p>
-        <button type="button" onClick={() => go(1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label="Next photo">
-          next →
+        <button type="button" onClick={() => go(1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label={t.gallery.nextLabel}>
+          {t.gallery.next}
         </button>
       </div>
     </motion.div>

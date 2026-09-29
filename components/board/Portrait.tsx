@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { animate, motion, useMotionTemplate, useMotionValue, useReducedMotion } from "motion/react";
 import type { Profile } from "@/content/types";
+import { useI18n } from "../I18n";
 
 /** How much the portrait grows while the childhood photo shows. */
 const SCALE = 1.6;
@@ -32,6 +33,7 @@ export default function Portrait({
   showHint: boolean;
 }) {
   const reduce = useReducedMotion();
+  const { t } = useI18n();
   const ref = useRef<HTMLButtonElement>(null);
   const r = useMotionValue(0);
   const cx = useMotionValue(size / 2);
@@ -66,7 +68,7 @@ export default function Portrait({
         type="button"
         aria-expanded={revealed}
         aria-controls="childhood-note"
-        aria-label={revealed ? "Hide the childhood photo" : `Show ${profile.shortName} as a kid`}
+        aria-label={revealed ? t.portrait.hide : t.portrait.show(profile.shortName)}
         disabled={!kid}
         onPointerEnter={(e) => {
           if (e.pointerType !== "mouse") return;
@@ -134,8 +136,8 @@ export default function Portrait({
           className="pointer-events-none absolute left-0 -translate-x-1/2 font-mono text-[10px] tracking-wide whitespace-nowrap text-ink-3 uppercase transition-opacity duration-300"
           style={{ top: size / 2 + 14, opacity: revealed ? 0 : 1 }}
         >
-          <span className="pointer-coarse:hidden">hover · then &amp; now</span>
-          <span className="hidden pointer-coarse:inline">tap · then &amp; now</span>
+          <span className="pointer-coarse:hidden">{t.portrait.hintPointer}</span>
+          <span className="hidden pointer-coarse:inline">{t.portrait.hintTouch}</span>
         </p>
       )}
     </>

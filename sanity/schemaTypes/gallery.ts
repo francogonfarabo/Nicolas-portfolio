@@ -1,12 +1,13 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
+import { englishRequired } from "./locale";
 
 export const gallery = defineType({
   name: "gallery",
   title: "Photography",
   type: "document",
   fields: [
-    defineField({ name: "title", type: "string" }),
-    defineField({ name: "intro", type: "text", rows: 2 }),
+    defineField({ name: "title", type: "localeString" }),
+    defineField({ name: "intro", type: "localeText" }),
     defineField({
       name: "photos",
       type: "array",
@@ -17,13 +18,13 @@ export const gallery = defineType({
           type: "image",
           options: { hotspot: true },
           fields: [
-            defineField({ name: "title", type: "string", validation: (r) => r.required() }),
+            defineField({ name: "title", type: "localeString", validation: (r) => r.custom(englishRequired) }),
             defineField({
               name: "alt",
               title: "Alt text",
-              type: "string",
+              type: "localeString",
               description: "Describe the photo for screen readers.",
-              validation: (r) => r.required(),
+              validation: (r) => r.custom(englishRequired),
             }),
           ],
         }),

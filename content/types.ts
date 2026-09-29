@@ -1,4 +1,17 @@
-/** Shapes shared by the Sanity fetch and the local fallback. Components only see these. */
+/**
+ * Two layers:
+ * - Raw*: what Sanity (and the local fallback) store. Translatable text is `{ en, es }`,
+ *   dates are "YYYY" or "YYYY-MM".
+ * - The plain types below: one language resolved, dates formatted. Components only see these.
+ */
+
+export type Locale = "en" | "es";
+export const locales: Locale[] = ["en", "es"];
+
+/** A translatable string. English is the source; missing Spanish falls back to English. */
+export type L = { en: string; es?: string };
+
+// ---------------------------------------------------------------- resolved
 
 export type Img = {
   src: string;
@@ -66,4 +79,70 @@ export type Skills = { categories: SkillCategory[]; rings: { value: number; labe
 export type Photo = Img & { title: string };
 export type Gallery = { title?: string; intro?: string; photos: Photo[] };
 
-export type SiteContent = { profile: Profile; work: Work; skills: Skills; gallery: Gallery; source: "sanity" | "local" };
+export type SiteContent = {
+  locale: Locale;
+  profile: Profile;
+  work: Work;
+  skills: Skills;
+  gallery: Gallery;
+  source: "sanity" | "local";
+};
+
+// ---------------------------------------------------------------- raw (stored)
+
+export type RawImg = Omit<Img, "alt"> & { alt: L };
+
+export type RawProfile = {
+  name: string;
+  shortName: string;
+  role: L;
+  since?: string;
+  intro?: L;
+  portrait: RawImg;
+  childhood?: RawImg;
+  childhoodQuote?: L;
+  email: string;
+  linkedin?: string;
+  /** English CV; `cvUrlEs` is optional and used on the Spanish page when present. */
+  cvUrl?: string;
+  cvUrlEs?: string;
+  contactTitle?: L;
+  contactBody?: L;
+};
+
+export type RawRole = {
+  title: L;
+  org: L;
+  orgUrl?: string;
+  start: string;
+  end?: string;
+  current: boolean;
+  paragraphs: L[];
+  clients?: L[];
+};
+
+export type RawProject = {
+  name: string;
+  url?: string;
+  start: string;
+  end?: string;
+  current: boolean;
+  intro?: L;
+  bullets: L[];
+  skills: string[];
+};
+
+export type RawWork = {
+  roles: RawRole[];
+  projects: RawProject[];
+  certificates: { name: L; date?: string; url?: string; note?: string }[];
+  education?: { degree?: L; school?: L; start?: string; end?: string; place?: string };
+  languages: { name: L; level?: L }[];
+};
+
+export type RawSkills = {
+  rings: { value: number; label?: L }[];
+  categories: { id: string; label: L; color: string; skills: { key: string; label: L; value: number; basis?: string }[] }[];
+};
+
+export type RawGallery = { title?: L; intro?: L; photos: (RawImg & { title: L })[] };

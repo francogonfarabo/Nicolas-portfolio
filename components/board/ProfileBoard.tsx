@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { Profile, Skills, Work } from "@/content/types";
 import ChartPanel from "./ChartPanel";
 import WorkPanel from "./WorkPanel";
+import { useI18n } from "../I18n";
 
 export type SkillMeta = { label: string; color: string; family: string };
 
@@ -13,6 +14,7 @@ export type SkillMeta = { label: string; color: string; family: string };
  * Hover/tap a project → its skills light up. Hover a skill → the projects that used it light up.
  */
 export default function ProfileBoard({ profile, work, skills }: { profile: Profile; work: Work; skills: Skills }) {
+  const { t } = useI18n();
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
   const revealed = hovered || pinned;
@@ -39,11 +41,11 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
     return null;
   }, [projectSkills, familyHover, skills]);
 
-  const since = profile.since ? ` · since ${profile.since}` : "";
+  const since = profile.since ? ` · ${t.profile.since(profile.since)}` : "";
   const skillCount = skills.categories.reduce((n, c) => n + c.skills.length, 0);
 
   return (
-    <section id="top" aria-label="Profile, skills and work history" className="border-b border-line">
+    <section id="top" aria-label={t.profile.section} className="border-b border-line">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         {/* Identity (scrolls away) */}
         <div className="pt-8 pb-7 sm:pt-12">
@@ -57,10 +59,10 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
           </h1>
           {profile.intro && <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-2">{profile.intro}</p>}
           <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-ink-3 uppercase">
-            <Stat label="projects" value={work.projects.length} />
-            <Stat label="certifications" value={work.certificates.length} />
-            <Stat label="skills mapped" value={skillCount} />
-            {work.languages.length > 0 && <Stat label="languages" value={work.languages.length} />}
+            <Stat label={t.profile.projects} value={work.projects.length} />
+            <Stat label={t.profile.certifications} value={work.certificates.length} />
+            <Stat label={t.profile.skillsMapped} value={skillCount} />
+            {work.languages.length > 0 && <Stat label={t.profile.languages} value={work.languages.length} />}
           </dl>
         </div>
 

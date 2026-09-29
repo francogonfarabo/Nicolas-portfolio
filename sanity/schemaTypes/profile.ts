@@ -1,11 +1,12 @@
 import { defineField, defineType } from "sanity";
+import { englishRequired } from "./locale";
 
 const altField = defineField({
   name: "alt",
   title: "Alt text",
-  type: "string",
+  type: "localeString",
   description: "Describe the image for screen readers.",
-  validation: (r) => r.required(),
+  validation: (r) => r.custom(englishRequired),
 });
 
 export const profile = defineType({
@@ -20,16 +21,9 @@ export const profile = defineType({
   fields: [
     defineField({ name: "name", type: "string", group: "identity", validation: (r) => r.required() }),
     defineField({ name: "shortName", title: "Short name", type: "string", group: "identity", initialValue: "Nico" }),
-    defineField({ name: "role", type: "string", group: "identity", validation: (r) => r.required() }),
+    defineField({ name: "role", type: "localeString", group: "identity", validation: (r) => r.custom(englishRequired) }),
     defineField({ name: "since", title: "Working since (year)", type: "string", group: "identity" }),
-    defineField({
-      name: "intro",
-      title: "Intro line",
-      type: "text",
-      rows: 2,
-      group: "identity",
-      validation: (r) => r.max(180),
-    }),
+    defineField({ name: "intro", title: "Intro line", type: "localeText", group: "identity" }),
     defineField({
       name: "portrait",
       type: "image",
@@ -51,8 +45,7 @@ export const profile = defineType({
     defineField({
       name: "childhoodQuote",
       title: "Quote",
-      type: "text",
-      rows: 5,
+      type: "localeText",
       group: "easterEgg",
       description: "Shown centred above the portrait while the childhood photo is visible.",
     }),
@@ -60,13 +53,21 @@ export const profile = defineType({
     defineField({ name: "linkedin", title: "LinkedIn URL", type: "url", group: "contact" }),
     defineField({
       name: "cvFile",
-      title: "CV (PDF)",
+      title: "CV (PDF, English)",
       type: "file",
       group: "contact",
       options: { accept: "application/pdf" },
     }),
-    defineField({ name: "contactTitle", title: "Contact heading", type: "string", group: "contact" }),
-    defineField({ name: "contactBody", title: "Contact text", type: "text", rows: 3, group: "contact" }),
+    defineField({
+      name: "cvFileEs",
+      title: "CV (PDF, Español)",
+      type: "file",
+      group: "contact",
+      options: { accept: "application/pdf" },
+      description: "Optional. Without it, the Spanish page offers the English PDF.",
+    }),
+    defineField({ name: "contactTitle", title: "Contact heading", type: "localeString", group: "contact" }),
+    defineField({ name: "contactBody", title: "Contact text", type: "localeText", group: "contact" }),
   ],
-  preview: { select: { title: "name", subtitle: "role", media: "portrait" } },
+  preview: { select: { title: "name", subtitle: "role.en", media: "portrait" } },
 });

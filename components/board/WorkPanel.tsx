@@ -4,12 +4,16 @@ import { useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Project, Work } from "@/content/types";
 import type { SkillMeta } from "./ProfileBoard";
+import { useI18n } from "../I18n";
 
-const period = (start: string, end: string | undefined, current: boolean) => (
-  <>
-    {start} — {current ? <span className="text-ink">present</span> : end}
-  </>
-);
+function Period({ start, end, current }: { start: string; end?: string; current: boolean }) {
+  const { t } = useI18n();
+  return (
+    <>
+      {start} — {current ? <span className="text-ink">{t.work.present}</span> : end}
+    </>
+  );
+}
 
 export default function WorkPanel({
   work,
@@ -24,6 +28,7 @@ export default function WorkPanel({
   onProjectHover: (skills: string[] | null) => void;
   onSkillTag: (key: string) => void;
 }) {
+  const { t } = useI18n();
   const firstRich = work.projects.findIndex((p) => p.bullets.length > 2);
   const [open, setOpen] = useState<Set<number>>(() => new Set(firstRich >= 0 ? [firstRich] : []));
   const toggle = (i: number) =>
@@ -40,15 +45,15 @@ export default function WorkPanel({
   return (
     <div id="work" className="scroll-mt-[calc(var(--header-h)+var(--panel-h))] pt-6 pb-16">
       {/* Roles */}
-      <Block title="Experience" aside={earliest ? `${earliest} — present` : undefined} id="experience-title">
+      <Block title={t.work.experience} aside={earliest ? `${earliest} — ${t.work.present}` : undefined} id="experience-title">
         <ol className="divide-y divide-line">
           {work.roles.map((r) => (
             <li key={r.title + r.org} className="grid gap-x-6 gap-y-1 py-5 first:pt-0 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
-              <p className="font-mono text-[11px] leading-6 text-ink-3 uppercase tabular">{period(r.start, r.end, r.current)}</p>
+              <p className="font-mono text-[11px] leading-6 text-ink-3 uppercase tabular"><Period start={r.start} end={r.end} current={r.current} /></p>
               <div>
                 <h3 className="text-[15px] leading-6 font-medium">
                   {r.title}
-                  <span className="text-ink-3"> @ </span>
+                  <span className="text-ink-3"> {t.work.at} </span>
                   {r.orgUrl ? (
                     <a href={r.orgUrl} target="_blank" rel="noreferrer" className="underline decoration-line-2 underline-offset-4 hover:decoration-ink">
                       {r.org}
@@ -64,7 +69,7 @@ export default function WorkPanel({
                 </div>
                 {!!r.clients?.length && (
                   <p className="mt-3 font-mono text-[11px] leading-relaxed text-ink-3">
-                    <span className="uppercase">clients:</span> {r.clients.join(" · ")}
+                    <span className="uppercase">{t.work.clients}:</span> {r.clients.join(" · ")}
                   </p>
                 )}
               </div>
@@ -75,12 +80,12 @@ export default function WorkPanel({
 
       {/* Projects */}
       <Block
-        title="Projects"
+        title={t.work.projects}
         count={work.projects.length}
         aside={
           activeSkill && skillIndex.get(activeSkill)
-            ? `${skillIndex.get(activeSkill)!.label} → ${usedIn} project${usedIn === 1 ? "" : "s"}`
-            : "select a row to see its stack"
+            ? t.work.usedIn(skillIndex.get(activeSkill)!.label, usedIn)
+            : t.work.rowHint
         }
         id="projects-title"
       >
@@ -101,7 +106,7 @@ export default function WorkPanel({
       </Block>
 
       {/* Credentials */}
-      <Block title="Certifications" count={work.certificates.length} id="certs-title">
+      <Block title={t.work.certifications} count={work.certificates.length} id="certs-title">
         <ul className="border-t border-line">
           {work.certificates.map((c) => (
             <li key={c.name} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-line py-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto] sm:gap-x-6">
@@ -109,7 +114,7 @@ export default function WorkPanel({
               <span className="text-[14px]">{c.name}</span>
               {c.url ? (
                 <a href={c.url} target="_blank" rel="noreferrer" className="font-mono text-[11px] text-ink-2 uppercase hover:text-ink">
-                  verify ↗<span className="sr-only"> {c.name} (opens in a new tab)</span>
+                  {t.work.verify} ↗<span className="sr-only"> {c.name} {t.newTab}</span>
                 </a>
               ) : (
                 <span className="font-mono text-[11px] text-ink-3">{c.note}</span>
@@ -121,7 +126,7 @@ export default function WorkPanel({
 
       <div className="grid gap-x-10 sm:grid-cols-2">
         {work.education?.degree && (
-          <Block title="Education" id="edu-title">
+          <Block title={t.work.education} id="edu-title">
             <div className="border-t border-line py-3">
               <p className="font-mono text-[11px] text-ink-3 uppercase tabular">
                 {work.education.start} — {work.education.end}
@@ -135,7 +140,7 @@ export default function WorkPanel({
           </Block>
         )}
         {work.languages.length > 0 && (
-          <Block title="Languages" id="lang-title">
+          <Block title={t.work.languages} id="lang-title">
             <ul className="border-t border-line">
               {work.languages.map((l) => (
                 <li key={l.name} className="flex items-baseline justify-between gap-4 border-b border-line py-2.5">
@@ -200,8 +205,9 @@ function ProjectRow({
   onSkillTag: (key: string) => void;
 }) {
   const reduce = useReducedMotion();
+  const { t } = useI18n();
   const panelId = useId();
-  const tags = p.skills.map((k) => [k, skillIndex.get(k)] as const).filter((t): t is readonly [string, SkillMeta] => !!t[1]);
+  const tags = p.skills.map((k) => [k, skillIndex.get(k)] as const).filter((x): x is readonly [string, SkillMeta] => !!x[1]);
 
   return (
     <li
@@ -221,19 +227,19 @@ function ProjectRow({
           className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 py-3 text-left transition-colors hover:bg-bg-2 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto] sm:gap-x-6"
         >
           <span className="hidden font-mono text-[11px] leading-6 text-ink-3 uppercase tabular sm:block">
-            {period(p.start, p.end, p.current)}
+            <Period start={p.start} end={p.end} current={p.current} />
           </span>
           <span className="min-w-0">
             <span className="block text-[14px] leading-6 font-medium">
               {p.name}
               {p.current && (
                 <span className="ml-2 inline-block size-1.5 -translate-y-px rounded-full bg-plus align-middle">
-                  <span className="sr-only">ongoing</span>
+                  <span className="sr-only">{t.work.ongoing}</span>
                 </span>
               )}
             </span>
             {p.intro && <span className="block text-[13px] leading-snug text-ink-3">{p.intro}</span>}
-            <span className="mt-1 block font-mono text-[10.5px] text-ink-3 uppercase sm:hidden">{period(p.start, p.end, p.current)}</span>
+            <span className="mt-1 block font-mono text-[10.5px] text-ink-3 uppercase sm:hidden"><Period start={p.start} end={p.end} current={p.current} /></span>
           </span>
           <span className="flex items-center gap-3 pt-1.5">
             <span className="hidden gap-[3px] md:flex" aria-hidden>
@@ -280,12 +286,12 @@ function ProjectRow({
                   >
                     <span className="size-1.5" style={{ background: s.color }} aria-hidden />
                     {s.label}
-                    <span className="sr-only">: show in skills map</span>
+                    <span className="sr-only">{t.work.showInMap}</span>
                   </button>
                 ))}
                 {p.url && (
                   <a href={p.url} target="_blank" rel="noreferrer" className="ml-auto font-mono text-[10.5px] text-ink-2 uppercase hover:text-ink">
-                    website ↗<span className="sr-only"> (opens in a new tab)</span>
+                    {t.work.website} ↗<span className="sr-only"> {t.newTab}</span>
                   </a>
                 )}
               </div>

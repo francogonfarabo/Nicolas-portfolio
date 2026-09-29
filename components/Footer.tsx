@@ -1,14 +1,17 @@
-import type { Profile } from "@/content/types";
+import type { Locale, Profile } from "@/content/types";
+import { dictionaries } from "@/lib/i18n";
 
-export default function Footer({ profile }: { profile: Profile }) {
+export default function Footer({ profile, locale }: { profile: Profile; locale: Locale }) {
+  const t = dictionaries[locale].footer;
+  const newTab = dictionaries[locale].newTab;
   const year = new Date().getFullYear();
   return (
     <footer id="contact" aria-labelledby="contact-title" className="border-t border-line">
       <div className="mx-auto grid max-w-3xl gap-10 px-4 py-16 sm:px-6 md:py-20">
         <div>
-          <p className="meta">Contact</p>
+          <p className="meta">{t.contact}</p>
           <h2 id="contact-title" className="mt-4 max-w-xl text-[clamp(1.6rem,3.2vw,2.4rem)] leading-[1.1] font-medium tracking-[-0.025em] text-balance">
-            {profile.contactTitle ?? "Get in touch"}
+            {profile.contactTitle ?? t.fallbackTitle}
           </h2>
           {profile.contactBody && <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-ink-2">{profile.contactBody}</p>}
           <a
@@ -25,13 +28,14 @@ export default function Footer({ profile }: { profile: Profile }) {
           {profile.linkedin && (
             <FooterRow
               href={profile.linkedin}
-              label="LinkedIn"
+              label={t.linkedin}
               value={profile.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com/, "").replace(/\/$/, "") || "profile"}
               external
+              newTab={newTab}
             />
           )}
-          {profile.cvUrl && <FooterRow href={profile.cvUrl} label="CV" value="download .pdf" download />}
-          <FooterRow href={`mailto:${profile.email}`} label="Email" value="write" />
+          {profile.cvUrl && <FooterRow href={profile.cvUrl} label={t.cv} value={t.download} download />}
+          <FooterRow href={`mailto:${profile.email}`} label={t.email} value={t.write} />
         </ul>
       </div>
       <div className="border-t border-line">
@@ -40,7 +44,7 @@ export default function Footer({ profile }: { profile: Profile }) {
             © {year} {profile.name}
           </span>
           <a href="#top" className="transition-colors hover:text-ink">
-            ↑ top
+            {t.top}
           </a>
         </div>
       </div>
@@ -54,12 +58,14 @@ function FooterRow({
   value,
   external,
   download,
+  newTab,
 }: {
   href: string;
   label: string;
   value: string;
   external?: boolean;
   download?: boolean;
+  newTab?: string;
 }) {
   return (
     <li className="bg-white">
@@ -72,6 +78,7 @@ function FooterRow({
         <span className="text-ink-3 uppercase">{label}</span>
         <span className="truncate text-ink">
           {value} {external ? "↗" : download ? "↓" : "→"}
+          {external && <span className="sr-only"> {newTab}</span>}
         </span>
       </a>
     </li>

@@ -31,6 +31,16 @@ Open `/studio` and sign in with the Sanity account that owns the project. There 
 - **Adding people:** invite editors at https://www.sanity.io/manage/project/tqm0fcg9.
 - **Deploying the site:** add your production domain as a CORS origin with credentials, either in the Sanity manage page or with `npx sanity cors add https://your-domain --credentials`.
 
+### English / Español
+
+The site is bilingual: `/` is English and `/es` is Spanish, with an EN · ES switch in the header.
+
+- **In the Studio,** every translatable field has an **English** and an **Español** box side by side. English is required. Leave Español empty and the Spanish page shows the English text, which is handy for tool names like "Terraform".
+- **Dates** are entered as `YYYY-MM` (e.g. `2023-10`) or `YYYY`. The site formats them per language: "Oct 2023" / "oct 2023".
+- **CV PDF:** add an optional **CV (PDF, Español)** in Profile → Contact. Without it, the Spanish page offers the English PDF.
+- **Fixed labels** (buttons, headings, hints) live in `lib/i18n.ts`.
+- The Spanish content is a drafted translation for Nico to review.
+
 ### Local fallback and re-seeding
 
 `content/*.ts` holds a local copy of everything. The site falls back to it for any section Sanity doesn't return, for example if it's unreachable.
@@ -40,13 +50,14 @@ Open `/studio` and sign in with the Sanity account that owns the project. There 
 ## Where things live
 
 ```
-app/(site)/          page + layout (fonts, globals)
+app/(en)/, app/(es)/ one root layout per language (sets <html lang>), pages render components/SitePage
 app/studio/          embedded Sanity Studio
 components/
   Header, Footer, Gallery, ConsoleHello
   board/             ProfileBoard (chart ⟷ work linking), ChartPanel, WorkPanel, Portrait (easter egg)
   skills/            RadialChart, geometry (layout maths), SkillList (read-only list view)
-lib/content.ts       GROQ query + mapping + fallback
+lib/content.ts       GROQ query + fallback + resolving one language
+lib/i18n.ts          UI strings (en/es), date formatting
 sanity/              schema, structure, client, env
 content/             local fallback + seed source
 scripts/seed.ts      pushes content/ into Sanity

@@ -1,11 +1,14 @@
 import { defineArrayMember, defineField, defineType } from "sanity";
 import { apiVersion } from "../env";
+import { dateField, englishRequired } from "./locale";
 
 const period = [
-  defineField({ name: "start", type: "string", description: "e.g. “Oct 2023” or “2019”", validation: (r) => r.required() }),
-  defineField({ name: "end", type: "string", description: "Leave empty if ongoing", hidden: ({ parent }) => !!parent?.current }),
+  dateField("start", { validation: (r: any) => r.required().regex(/^\d{4}(-(0[1-9]|1[0-2]))?$/, { name: "YYYY-MM or YYYY" }) }),
+  dateField("end", { hidden: ({ parent }: { parent?: { current?: boolean } }) => !!parent?.current }),
   defineField({ name: "current", title: "Ongoing", type: "boolean", initialValue: false }),
 ];
+
+const range = (start?: string, end?: string, current?: boolean) => `${start ?? ""} → ${current ? "present" : end ?? ""}`;
 
 export const work = defineType({
   name: "work",
@@ -26,19 +29,16 @@ export const work = defineType({
           type: "object",
           name: "role",
           fields: [
-            defineField({ name: "title", type: "string", validation: (r) => r.required() }),
-            defineField({ name: "org", title: "Organisation", type: "string", validation: (r) => r.required() }),
+            defineField({ name: "title", type: "localeString", validation: (r) => r.custom(englishRequired) }),
+            defineField({ name: "org", title: "Organisation", type: "localeString", validation: (r) => r.custom(englishRequired) }),
             defineField({ name: "orgUrl", title: "Organisation URL", type: "url" }),
             ...period,
-            defineField({ name: "paragraphs", type: "array", of: [{ type: "text", rows: 3 }] }),
-            defineField({ name: "clients", type: "array", of: [{ type: "string" }], options: { layout: "tags" } }),
+            defineField({ name: "paragraphs", type: "array", of: [{ type: "localeText" }] }),
+            defineField({ name: "clients", type: "array", of: [{ type: "localeString" }] }),
           ],
           preview: {
-            select: { title: "title", org: "org", start: "start", end: "end", current: "current" },
-            prepare: ({ title, org, start, end, current }) => ({
-              title: `${title} · ${org}`,
-              subtitle: `${start} → ${current ? "present" : end ?? ""}`,
-            }),
+            select: { title: "title.en", org: "org.en", start: "start", end: "end", current: "current" },
+            prepare: ({ title, org, start, end, current }) => ({ title: `${title} · ${org}`, subtitle: range(start, end, current) }),
           },
         }),
       ],
@@ -56,8 +56,8 @@ export const work = defineType({
             defineField({ name: "name", type: "string", validation: (r) => r.required() }),
             defineField({ name: "url", title: "Website", type: "url" }),
             ...period,
-            defineField({ name: "intro", title: "One-line summary", type: "string", validation: (r) => r.max(140) }),
-            defineField({ name: "bullets", type: "array", of: [{ type: "text", rows: 2 }] }),
+            defineField({ name: "intro", title: "One-line summary", type: "localeString" }),
+            defineField({ name: "bullets", type: "array", of: [{ type: "localeText" }] }),
             defineField({
               name: "skills",
               type: "array",
@@ -77,7 +77,7 @@ export const work = defineType({
           ],
           preview: {
             select: { title: "name", start: "start", end: "end", current: "current" },
-            prepare: ({ title, start, end, current }) => ({ title, subtitle: `${start} → ${current ? "present" : end ?? ""}` }),
+            prepare: ({ title, start, end, current }) => ({ title, subtitle: range(start, end, current) }),
           },
         }),
       ],
@@ -91,12 +91,12 @@ export const work = defineType({
           type: "object",
           name: "certificate",
           fields: [
-            defineField({ name: "name", type: "string", validation: (r) => r.required() }),
-            defineField({ name: "date", type: "string" }),
+            defineField({ name: "name", type: "localeString", validation: (r) => r.custom(englishRequired) }),
+            dateField("date"),
             defineField({ name: "url", title: "Verification URL", type: "url" }),
             defineField({ name: "note", type: "string", description: "Shown when there's no URL, e.g. a certificate number." }),
           ],
-          preview: { select: { title: "name", subtitle: "date" } },
+          preview: { select: { title: "name.en", subtitle: "date" } },
         }),
       ],
     }),
@@ -105,8 +105,8 @@ export const work = defineType({
       type: "object",
       group: "credentials",
       fields: [
-        defineField({ name: "degree", type: "string" }),
-        defineField({ name: "school", type: "string" }),
+        defineField({ name: "degree", type: "localeString" }),
+        defineField({ name: "school", type: "localeString" }),
         defineField({ name: "start", type: "string" }),
         defineField({ name: "end", type: "string" }),
         defineField({ name: "place", type: "string" }),
@@ -120,8 +120,8 @@ export const work = defineType({
         defineArrayMember({
           type: "object",
           name: "language",
-          fields: [defineField({ name: "name", type: "string" }), defineField({ name: "level", type: "string" })],
-          preview: { select: { title: "name", subtitle: "level" } },
+          fields: [defineField({ name: "name", type: "localeString" }), defineField({ name: "level", type: "localeString" })],
+          preview: { select: { title: "name.en", subtitle: "level.en" } },
         }),
       ],
     }),

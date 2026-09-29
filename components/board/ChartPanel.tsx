@@ -6,6 +6,7 @@ import type { Profile, Skills } from "@/content/types";
 import RadialChart from "../skills/RadialChart";
 import SkillList from "../skills/SkillList";
 import Portrait, { ChildhoodNote } from "./Portrait";
+import { useI18n } from "../I18n";
 
 /**
  * The skills map. Pinned under the header while the work history scrolls beneath it,
@@ -34,6 +35,7 @@ export default function ChartPanel({
   onPortraitToggle: () => void;
 }) {
   const reduce = useReducedMotion();
+  const { t } = useI18n();
   const [touched, setTouched] = useState(false);
   const [showList, setShowList] = useState(false);
 
@@ -42,9 +44,9 @@ export default function ChartPanel({
       {/* Title bar: name, legend, list toggle */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-line px-3 py-2">
         <h2 id="skills-title" className="meta !text-ink">
-          fig.01 — Skills map
+          {t.chart.title}
         </h2>
-        <ul className="order-3 flex w-full flex-wrap gap-x-3 gap-y-1 sm:order-none sm:w-auto" aria-label="Skill families">
+        <ul className="order-3 flex w-full flex-wrap gap-x-3 gap-y-1 sm:order-none sm:w-auto" aria-label={t.chart.families}>
           {skills.categories.map((c) => (
             <li
               key={c.id}
@@ -64,15 +66,14 @@ export default function ChartPanel({
           aria-controls="skill-list"
           className="ml-auto px-1.5 py-0.5 font-mono text-[10.5px] text-ink uppercase transition-colors hover:bg-surface aria-expanded:bg-ink aria-expanded:text-white"
         >
-          {showList ? "close" : "list"}
+          {showList ? t.chart.close : t.chart.list}
         </button>
       </div>
 
       {/* Chart */}
       <div className="dot-grid relative h-(--chart-area) px-3 pt-2">
         <p id="skills-desc" className="sr-only">
-          Distance from the centre shows depth of experience. Use the arrow keys to move between skills; each one reads its
-          level. A plain list of every skill is available with the list button.
+          {t.chart.description}
         </p>
         <RadialChart
           categories={skills.categories}

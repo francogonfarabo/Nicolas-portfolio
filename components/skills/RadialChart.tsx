@@ -16,6 +16,7 @@ import {
   radiusFor,
   slotsFor,
 } from "./geometry";
+import { useI18n } from "../I18n";
 
 type Props = {
   categories: SkillCategory[];
@@ -68,6 +69,7 @@ export default function RadialChart({
   describedBy,
 }: Props) {
   const reduce = !!useReducedMotion();
+  const { t } = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
@@ -338,8 +340,8 @@ export default function RadialChart({
     const v = valueOf(s);
     const level = levelName(v, rings);
     return s.kind === "hub"
-      ? `${s.label}: ${children.get(s.id)?.length} skills, average ${v} out of 100`
-      : `${s.label}: ${v} out of 100${level ? `, ${level}` : ""}`;
+      ? t.chart.familyAvg(s.label, children.get(s.id)?.length ?? 0, v)
+      : `${s.label}: ${t.chart.outOf(v)}${level ? `, ${level}` : ""}`;
   };
 
   return (
@@ -535,7 +537,7 @@ export default function RadialChart({
                   <span className="text-ink-3 tabular">{valueOf(activeSlot)}</span>
                 </span>
               ) : (
-                <span className="text-ink-3">touch a node</span>
+                <span className="text-ink-3">{t.chart.touch}</span>
               )}
             </div>
           )}

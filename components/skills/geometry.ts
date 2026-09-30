@@ -34,15 +34,14 @@ export const CHAR_W = 0.55; // average glyph width relative to font size (Geist)
 export function slotsFor(categories: SkillCategory[]): Slot[] {
   const margin = 0.09;
   const gap = 1.1;
-  const filled = categories.filter((c) => c.skills.length);
-  const leafCount = filled.reduce((n, c) => n + c.skills.length, 0);
-  // Steps inside each family, plus one wider gap between families: spans the full half-circle.
-  const units = Math.max(1, leafCount - filled.length + gap * (filled.length - 1));
+  const leafCount = categories.reduce((n, c) => n + c.skills.length, 0);
+  const units = Math.max(1, leafCount - 1 + gap * (categories.length - 1));
   const step = (Math.PI - margin * 2) / units;
 
   const slots: Slot[] = [];
   let a = Math.PI - margin;
-  filled.forEach((cat, ci) => {
+  categories.forEach((cat, ci) => {
+    if (!cat.skills.length) return;
     if (ci > 0) a -= step * gap;
     const leafSlots: Slot[] = cat.skills.map((s, i) => ({
       id: s.key,
@@ -62,20 +61,13 @@ export function slotsFor(categories: SkillCategory[]): Slot[] {
 }
 
 const R0_RATIO = 0.2;
-/** Below this radius the labels would collide: dots only, plus a readout for the active node. */
-const COMPACT_R = 185;
-const TOP = 22;
-
-/** Radius of the portrait's orbit. Grows smoothly with the chart, so resizing never jumps. */
-const r0For = (r1: number) => Math.max(r1 * R0_RATIO, Math.min(60, Math.max(44, 44 + (r1 - 110) * 0.4)));
-const rootFor = (r1: number) => Math.round(Math.min(104, Math.max(58, r0For(r1) * 1.35)));
-/** Room under the baseline: the lower half of the portrait and the ring numbers. */
-const bottomFor = (r1: number) => Math.max(38, rootFor(r1) / 2 + 10);
+/** Room under the baseline for the lower half of the portrait and its hint. */
+const BOTTOM = 86;
 
 /**
- * Size the half-disc so every label fits the box.
+ * Size the half-disc so every label (at its ORIGINAL value) fits the box.
+ * Layout never depends on live values, so the chart doesn't rescale mid-drag.
  * Each constraint is linear in r1, so each leaf gives a closed-form upper bound.
- * Everything is continuous in the box size, so the chart can shrink smoothly (see ProfileBoard).
  */
 export function makeFrame(width: number, maxHeight: number | undefined, categories: SkillCategory[]): Frame {
   const fontSize = width < 700 ? 11.5 : 12;
@@ -89,41 +81,42 @@ export function makeFrame(width: number, maxHeight: number | undefined, categori
     });
   const k = (v: number) => R0_RATIO + (1 - R0_RATIO) * v; // radius(v) / r1
 
-  const solve = (bottom: number) => {
-    let geo = Math.min(440, half - 8);
-    if (maxHeight) geo = Math.min(geo, maxHeight - bottom - TOP - 8);
-    let r1 = geo;
-    for (const l of leaves) {
-      const c = Math.abs(Math.cos(l.angle));
-      if (c > 0.05) r1 = Math.min(r1, (half - c * l.reach) / (c * k(l.v)));
-      const s = Math.sin(l.angle);
-      if (maxHeight && s > 0.05) r1 = Math.min(r1, (maxHeight - bottom - 8 - s * l.reach) / (s * k(l.v)));
-    }
-    // Too small for labels: drop them and use the plain geometric room instead (capped, so it stays continuous).
-    return r1 >= COMPACT_R ? { r1, compact: false } : { r1: Math.max(90, Math.min(geo, COMPACT_R)), compact: true };
-  };
-
-  // The room under the baseline depends on the portrait, which depends on r1: settle it in a few passes.
-  let bottom = 60;
-  let { r1, compact } = solve(bottom);
-  for (let i = 0; i < 3; i++) {
-    const b = bottomFor(r1);
-    if (Math.abs(b - bottom) < 0.5) break;
-    bottom = b;
-    ({ r1, compact } = solve(bottom));
+  let r1 = Math.min(440, half - 4);
+  for (const l of leaves) {
+    const c = Math.abs(Math.cos(l.angle));
+    if (c > 0.05) r1 = Math.min(r1, (half - c * l.reach) / (c * k(l.v)));
   }
-  bottom = Math.max(bottom, bottomFor(r1));
-  const r0 = r0For(r1);
+  if (maxHeight) {
+    r1 = Math.min(r1, maxHeight - BOTTOM - 16);
+    for (const l of leaves) {
+      const s = Math.sin(l.angle);
+      if (s > 0.05) r1 = Math.min(r1, (maxHeight - BOTTOM - 8 - s * l.reach) / (s * k(l.v)));
+    }
+  }
 
-  let top = TOP;
+  const compact = r1 < 170;
+  if (compact) r1 = Math.max(110, Math.min(250, half - 8, maxHeight ? maxHeight - BOTTOM - 30 : Infinity));
+  const r0 = Math.max(compact ? 44 : 60, r1 * R0_RATIO);
+
+  let top = 22;
   if (!compact) {
     for (const l of leaves) {
       const r = r0 + l.v * (r1 - r0);
       top = Math.max(top, Math.sin(l.angle) * (r + l.reach) - r1 + 8);
     }
   }
-  const height = top + r1 + bottom;
-  return { width, height, cx: width / 2, cy: top + r1, r0, r1, compact, fontSize, root: rootFor(r1) };
+  const height = top + r1 + BOTTOM;
+  return {
+    width,
+    height,
+    cx: width / 2,
+    cy: top + r1,
+    r0,
+    r1,
+    compact,
+    fontSize,
+    root: compact ? 64 : Math.round(Math.min(104, Math.max(72, r0 * 1.35))),
+  };
 }
 
 export const radiusFor = (f: Frame, value: number) => f.r0 + (Math.max(0, Math.min(100, value)) / 100) * (f.r1 - f.r0);

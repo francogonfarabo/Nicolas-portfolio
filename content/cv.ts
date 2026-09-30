@@ -50,7 +50,6 @@ export const profile: RawProfile = {
   },
   email: "NicolasGF@outlook.com.ar",
   linkedin: "https://www.linkedin.com/in/nicolas-gonzalez-farabollini/",
-  instagram: "https://www.instagram.com/gonzalezfarabollini/",
   cvUrl: "/Nicolas-Gonzalez-Farabollini-CV.pdf",
   contactTitle: { en: "Got a system that needs untangling?", es: "¿Hay un sistema que necesite desenredarse?" },
   contactBody: {

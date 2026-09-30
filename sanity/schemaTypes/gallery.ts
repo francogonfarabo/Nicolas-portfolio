@@ -18,11 +18,7 @@ export const gallery = defineType({
           type: "image",
           options: { hotspot: true },
           fields: [
-            defineField({
-              name: "title",
-              type: "localeString",
-              description: "Optional. Not shown on the page (photos appear without captions).",
-            }),
+            defineField({ name: "title", type: "localeString", validation: (r) => r.custom(englishRequired) }),
             defineField({
               name: "alt",
               title: "Alt text",

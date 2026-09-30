@@ -174,7 +174,7 @@ function Block({
   children: React.ReactNode;
 }) {
   return (
-    <section id={anchor} aria-labelledby={id} data-section className="mb-12 scroll-mt-[var(--stuck-offset,var(--panel-h))] last:mb-0">
+    <section id={anchor} aria-labelledby={id} className="mb-12 scroll-mt-[var(--stuck-offset,var(--panel-h))] last:mb-0">
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 id={id} className="meta !text-ink">
           {title}

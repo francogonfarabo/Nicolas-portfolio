@@ -21,7 +21,7 @@ const image = `{ alt, title, hotspot, "asset": asset->{ url, metadata { lqip, di
 
 const QUERY = defineQuery(`{
   "profile": *[_id == "profile"][0]{
-    name, shortName, role, since, intro, childhoodQuote, email, linkedin, instagram, contactTitle, contactBody,
+    name, shortName, role, since, intro, childhoodQuote, email, linkedin, contactTitle, contactBody,
     "portrait": portrait${image},
     "childhood": childhoodPhoto${image},
     "cvUrl": cvFile.asset->url,
@@ -180,7 +180,6 @@ export async function getContent(locale: Locale): Promise<SiteContent> {
       childhoodQuote: t(p.childhoodQuote),
       email: p.email,
       linkedin: p.linkedin,
-      instagram: p.instagram,
       cvUrl: (locale === "es" && p.cvUrlEs) || p.cvUrl,
       contactTitle: t(p.contactTitle),
       contactBody: t(p.contactBody),

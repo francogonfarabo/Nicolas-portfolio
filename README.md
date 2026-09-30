@@ -20,13 +20,12 @@ Open `/studio` and sign in with the Sanity account that owns the project. There 
 
 | Studio item | What it controls |
 | --- | --- |
-| **Profile** | Name, role, intro, portrait, the childhood photo + quote (easter egg), email, LinkedIn, Instagram (linked from Photography), CV PDF, contact copy |
+| **Profile** | Name, role, intro, portrait, the childhood photo + quote (easter egg), email, LinkedIn, CV PDF, contact copy |
 | **Work history** | Roles, projects (drag to reorder), certificates, education, languages |
 | **Skills chart** | Skill families (label + colour) and their skills (label, key, value 0–100, internal note), plus the guide rings |
-| **Photography** | Photos (drag to reorder), each with alt text. Photos show without captions |
+| **Photography** | Photos (drag to reorder), each with a title and alt text |
 
 - **Linking projects to the chart:** a project's `skills` field holds skill **keys** (e.g. `terraform`). The Studio flags any key that doesn't exist in Skills chart.
-- **Chart order:** families and skills are drawn left to right in Studio order. Keep short labels at the two ends (AWS, Git) and long ones in between, or the chart has to shrink to fit them.
 - **Focal points:** set the hotspot on the portrait (face) and on the childhood photo (where the zoom centres).
 - **When changes appear:** in `npm run dev`, on refresh. In production, within 60 seconds.
 - **Adding people:** invite editors at https://www.sanity.io/manage/project/tqm0fcg9.

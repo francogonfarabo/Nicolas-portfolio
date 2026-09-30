@@ -3,13 +3,27 @@ import { dictionaries, paths } from "@/lib/i18n";
 
 export default function Header({ profile, locale }: { profile: Profile; locale: Locale }) {
   const t = dictionaries[locale];
+  const initials = profile.name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-50 h-(--header-h) border-b border-line bg-white/85 backdrop-blur-md">
       <div className="mx-auto flex h-full max-w-3xl items-center justify-between gap-4 px-4 sm:px-6">
-        <nav aria-label={t.nav.main} className="-ml-2 flex items-center gap-1 font-mono text-[11px] tracking-wide uppercase">
+        <a href="#top" className="flex min-w-0 shrink-0 items-center gap-3" aria-label={t.nav.backToTop(profile.name)}>
+          <span className="grid h-6 shrink-0 place-items-center border border-ink px-1.5 font-mono text-[10px] leading-none font-medium tracking-wider">
+            {initials}
+          </span>
+          <span className="hidden truncate text-[13px] font-medium md:inline">{profile.name}</span>
+        </a>
+        <nav aria-label={t.nav.contact} className="flex items-center gap-1 font-mono text-[11px] tracking-wide uppercase">
           <HeaderLink href="#work">{t.nav.work}</HeaderLink>
-          <HeaderLink href="#photos">{t.nav.photos}</HeaderLink>
+          <HeaderLink href="#photos" className="max-sm:hidden">
+            {t.nav.photos}
+          </HeaderLink>
           <span aria-hidden className="mx-1 hidden h-4 w-px bg-line-2 sm:block" />
           <HeaderLink href={`mailto:${profile.email}`} className="max-sm:hidden">
             {t.nav.email}
@@ -19,14 +33,12 @@ export default function Header({ profile, locale }: { profile: Profile; locale: 
               {t.nav.linkedin}
             </HeaderLink>
           )}
-        </nav>
-        <div className="flex items-center gap-2 font-mono text-[11px] tracking-wide uppercase">
           <LanguageSwitch locale={locale} label={t.nav.language} />
           {profile.cvUrl && (
             <a
               href={profile.cvUrl}
               download
-              className="inline-flex items-center gap-1.5 bg-ink px-2.5 py-1.5 text-white transition-colors hover:bg-accent-ink"
+              className="ml-1 inline-flex items-center gap-1.5 bg-ink px-2.5 py-1.5 text-white transition-colors hover:bg-accent-ink"
             >
               CV.pdf
               <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -34,7 +46,7 @@ export default function Header({ profile, locale }: { profile: Profile; locale: 
               </svg>
             </a>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );
@@ -46,7 +58,7 @@ function LanguageSwitch({ locale, label }: { locale: Locale; label: string }) {
     { id: "es" as const, short: "ES", name: "Español" },
   ];
   return (
-    <div role="group" aria-label={label} className="flex items-center border border-line">
+    <div role="group" aria-label={label} className="mx-1 flex items-center border border-line">
       {langs.map((l) =>
         l.id === locale ? (
           <span key={l.id} aria-current="true" className="bg-surface px-1.5 py-1 text-ink" title={l.name}>

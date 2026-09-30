@@ -45,8 +45,7 @@ const en = {
     description:
       "Distance from the centre shows depth of experience. Use the arrow keys to move between skills; each one reads its level. A plain list of every skill is available with the list button.",
     touch: "touch a node",
-    outOf: (v: number) => `${v} out of 100`,
-    familyAvg: (label: string, n: number, v: number) => `${label}: ${n} skills, average ${v} out of 100`,
+    family: (label: string, n: number) => `${label}: ${n} skills`,
   },
   portrait: {
     hintPointer: "hover · then & now",
@@ -127,8 +126,7 @@ const es: Dict = {
     description:
       "La distancia al centro indica la profundidad de experiencia. Usa las flechas para moverte entre habilidades; cada una anuncia su nivel. Con el botón lista hay un listado simple de todas.",
     touch: "toca un nodo",
-    outOf: (v: number) => `${v} de 100`,
-    familyAvg: (label: string, n: number, v: number) => `${label}: ${n} habilidades, promedio ${v} de 100`,
+    family: (label: string, n: number) => `${label}: ${n} habilidades`,
   },
   portrait: {
     hintPointer: "pasa el cursor · antes y ahora",

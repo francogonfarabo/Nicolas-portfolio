@@ -97,13 +97,6 @@ export default function RadialChart({
     () => Object.fromEntries(categories.flatMap((c) => c.skills.map((s) => [s.key, s.value]))) as Record<string, number>,
     [categories],
   );
-  const meanOf = useCallback(
-    (hubId: string) => {
-      const v = (children.get(hubId) ?? []).map((c) => values[c.id] ?? 0);
-      return Math.round(v.reduce((a, b) => a + b, 0) / Math.max(1, v.length));
-    },
-    [children, values],
-  );
 
   const drag = useRef<Drag | null>(null);
   const bodies = useRef(new Map<string, Body>());
@@ -284,7 +277,7 @@ export default function RadialChart({
     kick();
   };
 
-  // --- keyboard: arrows move focus between nodes; focus reads the value --------
+  // --- keyboard: arrows move focus between nodes; focus reads the level --------
   const nodeRefs = useRef(new Map<string, SVGGElement>());
   const order = slots.map((s) => s.id);
   const tabbable = rovingId || order[0];
@@ -334,14 +327,18 @@ export default function RadialChart({
     return "neutral";
   };
 
+  // Hovering a connector counts as hovering the node it leads to.
+  const hoverProps = (id: string) => ({
+    onPointerEnter: (e: React.PointerEvent) => e.pointerType === "mouse" && setHoverId(id),
+    onPointerLeave: (e: React.PointerEvent) => e.pointerType === "mouse" && setHoverId((h) => (h === id ? null : h)),
+  });
+
   const pos = (id: string) => bodies.current.get(id)?.p ?? (frame ? { x: frame.cx, y: frame.cy } : { x: 0, y: 0 });
-  const valueOf = (s: Slot) => (s.kind === "leaf" ? values[s.id] : meanOf(s.id));
+  // Levels are estimates: described in words, never as numbers.
   const describe = (s: Slot) => {
-    const v = valueOf(s);
-    const level = levelName(v, rings);
-    return s.kind === "hub"
-      ? t.chart.familyAvg(s.label, children.get(s.id)?.length ?? 0, v)
-      : `${s.label}: ${t.chart.outOf(v)}${level ? `, ${level}` : ""}`;
+    if (s.kind === "hub") return t.chart.family(s.label, children.get(s.id)?.length ?? 0);
+    const level = levelName(values[s.id] ?? 0, rings);
+    return level ? `${s.label}: ${level}` : s.label;
   };
 
   return (
@@ -375,17 +372,10 @@ export default function RadialChart({
                 const op = state === "off" ? 0.1 : state === "on" ? 0.95 : 0.5;
                 if (s.kind === "hub") {
                   return (
-                    <line
-                      key={"l" + s.id}
-                      x1={frame.cx}
-                      y1={frame.cy}
-                      x2={p.x}
-                      y2={p.y}
-                      stroke={s.color}
-                      strokeOpacity={op}
-                      strokeWidth={1.4}
-                      style={{ transition: "stroke-opacity .3s" }}
-                    />
+                    <g key={"l" + s.id} {...hoverProps(s.id)}>
+                      <line x1={frame.cx} y1={frame.cy} x2={p.x} y2={p.y} stroke={s.color} strokeOpacity={op} strokeWidth={1.4} style={{ transition: "stroke-opacity .3s" }} />
+                      <line x1={frame.cx} y1={frame.cy} x2={p.x} y2={p.y} stroke="transparent" strokeWidth={12} pointerEvents="stroke" />
+                    </g>
                   );
                 }
                 const h = pos(s.hub!);
@@ -394,15 +384,12 @@ export default function RadialChart({
                 const len = Math.hypot(dx, dy) || 1;
                 const hr = Math.hypot(h.x - frame.cx, h.y - frame.cy);
                 const c = { x: frame.cx + (dx / len) * hr * 1.08, y: frame.cy + (dy / len) * hr * 1.08 };
+                const d = `M${h.x},${h.y} Q${c.x},${c.y} ${p.x},${p.y}`;
                 return (
-                  <path
-                    key={"l" + s.id}
-                    d={`M${h.x},${h.y} Q${c.x},${c.y} ${p.x},${p.y}`}
-                    stroke={s.color}
-                    strokeOpacity={op}
-                    strokeWidth={state === "on" ? 1.6 : 1.1}
-                    style={{ transition: "stroke-opacity .3s" }}
-                  />
+                  <g key={"l" + s.id} {...hoverProps(s.id)}>
+                    <path d={d} stroke={s.color} strokeOpacity={op} strokeWidth={state === "on" ? 1.6 : 1.1} style={{ transition: "stroke-opacity .3s" }} />
+                    <path d={d} stroke="transparent" strokeWidth={10} pointerEvents="stroke" />
+                  </g>
                 );
               })}
             </g>
@@ -413,7 +400,6 @@ export default function RadialChart({
               const state = lit(s);
               const isActive = activeId === s.id;
               const emphasised = state === "on";
-              const v = valueOf(s);
               const theta = Math.atan2(frame.cy - p.y, p.x - frame.cx);
               const deg = (theta * 180) / Math.PI;
               const right = theta < Math.PI / 2;
@@ -443,8 +429,7 @@ export default function RadialChart({
                   }}
                   onBlur={() => setFocusId((f) => (f === s.id ? null : f))}
                   onKeyDown={(e) => onKey(e, s)}
-                  onPointerEnter={(e) => e.pointerType === "mouse" && setHoverId(s.id)}
-                  onPointerLeave={(e) => e.pointerType === "mouse" && setHoverId((h) => (h === s.id ? null : h))}
+                  {...hoverProps(s.id)}
                   onPointerDown={(e) => onNodeDown(e, s)}
                   style={{
                     cursor: dragId === s.id ? "grabbing" : "grab",
@@ -472,27 +457,9 @@ export default function RadialChart({
                       dominantBaseline="central"
                       fill={emphasised ? INK : INK_2}
                       fontWeight={emphasised ? 550 : 400}
-                      className="pointer-events-none"
+                      style={{ cursor: "inherit" }}
                     >
-                      {right ? (
-                        <>
-                          {s.label}
-                          {(isActive || emphasised) && (
-                            <tspan className="font-mono" fill={INK_3} dx={6} style={{ fontSize: frame.fontSize - 1 }}>
-                              {v}
-                            </tspan>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          {(isActive || emphasised) && (
-                            <tspan className="font-mono" fill={INK_3} style={{ fontSize: frame.fontSize - 1 }}>
-                              {v}
-                            </tspan>
-                          )}
-                          <tspan dx={isActive || emphasised ? 6 : 0}>{s.label}</tspan>
-                        </>
-                      )}
+                      {s.label}
                     </text>
                   )}
                   {showLabel && s.kind === "hub" && (
@@ -507,7 +474,7 @@ export default function RadialChart({
                       strokeWidth={4}
                       paintOrder="stroke"
                       strokeLinejoin="round"
-                      className="pointer-events-none font-mono uppercase"
+                      className="font-mono uppercase"
                       style={{ fontSize: frame.fontSize - 2, letterSpacing: "0.06em" }}
                     >
                       {s.label}
@@ -534,7 +501,6 @@ export default function RadialChart({
                 <span className="inline-flex items-center gap-2 border border-line bg-white px-2 py-1 text-ink">
                   <span className="size-2" style={{ background: activeSlot.color }} />
                   {activeSlot.label}
-                  <span className="text-ink-3 tabular">{valueOf(activeSlot)}</span>
                 </span>
               ) : (
                 <span className="text-ink-3">{t.chart.touch}</span>
@@ -566,15 +532,11 @@ function Rings({ frame: f, rings }: { frame: Frame; rings: Skills["rings"] }) {
               strokeDasharray={outer ? undefined : "2 4"}
             />
             <line x1={f.cx + r} x2={f.cx + r} y1={f.cy} y2={f.cy + 5} stroke={LINE_2} />
-            <line x1={f.cx - r} x2={f.cx - r} y1={f.cy} y2={f.cy + 5} stroke={LINE_2} />
             {!f.compact && ring.label && (
               <text x={f.cx + r} y={f.cy + dy} textAnchor="middle" fill={INK_3} className="font-mono uppercase" style={{ fontSize: 9.5, letterSpacing: "0.06em" }}>
                 {ring.label}
               </text>
             )}
-            <text x={f.cx - r} y={f.cy + 18} textAnchor="middle" fill={INK_3} className="font-mono tabular" style={{ fontSize: 9.5 }}>
-              {ring.value}
-            </text>
           </g>
         );
       })}

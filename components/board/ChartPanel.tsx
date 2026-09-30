@@ -125,7 +125,7 @@ export default function ChartPanel({
               transition={{ duration: 0.18 }}
               className="absolute inset-0 z-10 overflow-y-auto overscroll-contain bg-white/97 p-4"
             >
-              <SkillList id="skill-list" categories={skills.categories} />
+              <SkillList id="skill-list" categories={skills.categories} rings={skills.rings} />
             </motion.div>
           )}
         </AnimatePresence>

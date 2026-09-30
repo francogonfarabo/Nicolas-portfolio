@@ -67,12 +67,12 @@ export const skills: RawSkills = {
     },
     {
       id: "human",
-      label: { en: "Soft skills", es: "Habilidades blandas" },
+      label: { en: "Soft skills", es: "Transversales" },
       color: "#4D7C0F",
       skills: [
         {
           key: "troubleshooting",
-          label: { en: "Deductive troubleshooting", es: "Resolución deductiva de problemas" },
+          label: { en: "Deductive troubleshooting", es: "Diagnóstico deductivo" },
           value: 85,
           basis: "Soft skill; live event debugging",
         },

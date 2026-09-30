@@ -49,8 +49,7 @@ const docs = [
     email: profile.email,
     linkedin: profile.linkedin,
     cvFile: profile.cvUrl ? { _type: "file", _sanityAsset: `file@${cvPath}` } : undefined,
-    contactTitle: profile.contactTitle,
-    contactBody: profile.contactBody,
+    instagram: profile.instagram,
   },
   {
     _id: "work",

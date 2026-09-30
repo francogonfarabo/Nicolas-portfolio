@@ -8,7 +8,7 @@ import { useI18n } from "./I18n";
 
 const idx = (i: number) => String(i + 1).padStart(2, "0");
 
-export default function Gallery({ gallery }: { gallery: GalleryData }) {
+export default function Gallery({ gallery, instagram }: { gallery: GalleryData; instagram?: string }) {
   const { t } = useI18n();
   const [open, setOpen] = useState<number | null>(null);
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -34,7 +34,17 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
             </h2>
             {gallery.intro && <p className="mt-2 max-w-md text-[14px] text-ink-2">{gallery.intro}</p>}
           </div>
-          <p className="font-mono text-[11px] text-ink-3">{t.gallery.hint}</p>
+          {instagram && (
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-[11px] text-ink-2 transition-colors hover:text-ink"
+            >
+              {t.gallery.instagram} <span className="text-ink-3">@{instagram.replace(/\/+$/, "").split("/").pop()}</span> ↗
+              <span className="sr-only"> {t.newTab}</span>
+            </a>
+          )}
         </div>
 
         <JustifiedGrid ratios={photos.map((p) => p.width / p.height)}>

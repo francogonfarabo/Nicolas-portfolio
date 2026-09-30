@@ -66,8 +66,13 @@ export const profile = defineType({
       options: { accept: "application/pdf" },
       description: "Optional. Without it, the Spanish page offers the English PDF.",
     }),
-    defineField({ name: "contactTitle", title: "Contact heading", type: "localeString", group: "contact" }),
-    defineField({ name: "contactBody", title: "Contact text", type: "localeText", group: "contact" }),
+    defineField({
+      name: "instagram",
+      title: "Instagram URL",
+      description: "Linked from the Photography section.",
+      type: "url",
+      group: "contact",
+    }),
   ],
   preview: { select: { title: "name", subtitle: "role.en", media: "portrait" } },
 });

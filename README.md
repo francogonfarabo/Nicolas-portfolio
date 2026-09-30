@@ -20,7 +20,7 @@ Open `/studio` and sign in with the Sanity account that owns the project. There 
 
 | Studio item | What it controls |
 | --- | --- |
-| **Profile** | Name, role, intro, portrait, the childhood photo + quote (easter egg), email, LinkedIn, CV PDF, contact copy |
+| **Profile** | Name, role, intro, portrait, the childhood photo + quote (easter egg), email, LinkedIn, Instagram (linked from Photography), CV PDF. The intro is used as the page description in search results |
 | **Work history** | Roles, projects (drag to reorder), certificates, education, languages |
 | **Skills chart** | Skill families (label + colour) and their skills (label, key, depth 0–100, internal note). Depth is only a position on the chart (further out = more hands-on); no number is ever shown |
 | **Photography** | Photos (drag to reorder), each with alt text. Photos show without captions |
@@ -68,7 +68,7 @@ app/studio/          embedded Sanity Studio
 components/
   Header, Footer, Gallery, ConsoleHello
   board/             ProfileBoard (chart ⟷ work linking), ChartPanel, WorkPanel, Portrait (easter egg)
-  skills/            RadialChart, geometry (layout maths), SkillList (read-only list view)
+  skills/            RadialChart, geometry (layout maths)
 lib/content.ts       GROQ query + fallback + resolving one language
 lib/i18n.ts          UI strings (en/es), date formatting
 sanity/              schema, structure, client, env

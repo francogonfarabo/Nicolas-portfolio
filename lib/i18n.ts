@@ -34,20 +34,16 @@ const en = {
     projects: "projects",
     certifications: "certifications",
     skillsMapped: "skills mapped",
-    languages: "languages",
   },
   chart: {
     title: "Skills",
     families: "Skill families",
-    list: "list",
-    close: "close",
     description:
-      "Skills grouped by family. The further from the centre, the more hands-on experience. Use the arrow keys to move between skills; each one says how many projects used it. A plain list of every skill is available with the list button.",
+      "Skills grouped by family. The further from the centre, the more hands-on experience. Use the arrow keys to move between skills; each one says how many projects used it.",
     key: "further out · more hands-on",
     touch: "touch a node",
     family: (label: string, n: number) => `${label}: ${n} skills`,
     skill: (label: string, n: number) => (n ? `${label}, used in ${n} project${n === 1 ? "" : "s"}` : label),
-    usedIn: (n: number) => `${n} project${n === 1 ? "" : "s"}`,
   },
   portrait: {
     show: (name: string) => `Show ${name} as a kid`,
@@ -72,7 +68,7 @@ const en = {
   },
   gallery: {
     title: "Photography",
-    hint: "select a frame to view",
+    instagram: "More on Instagram",
     open: (i: string, alt: string) => `Open photo ${i}${alt ? `: ${alt}` : ""}`,
     dialog: (i: number, n: number) => `Photo ${i} of ${n}`,
     close: "close [esc]",
@@ -82,14 +78,7 @@ const en = {
     nextLabel: "Next photo",
   },
   footer: {
-    contact: "Contact",
-    fallbackTitle: "Get in touch",
-    linkedin: "LinkedIn",
-    cv: "CV",
-    download: "download .pdf",
-    email: "Email",
-    write: "write",
-    top: "↑ top",
+    designedBy: "Designed by",
   },
   meta: {
     description: (intro?: string) => intro ?? "",
@@ -115,20 +104,16 @@ const es: Dict = {
     projects: "proyectos",
     certifications: "certificaciones",
     skillsMapped: "habilidades",
-    languages: "idiomas",
   },
   chart: {
     title: "Habilidades",
     families: "Familias de habilidades",
-    list: "lista",
-    close: "cerrar",
     description:
-      "Habilidades agrupadas por familia. Cuanto más lejos del centro, más experiencia práctica. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó. Con el botón lista hay un listado simple de todas.",
+      "Habilidades agrupadas por familia. Cuanto más lejos del centro, más experiencia práctica. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó.",
     key: "más afuera · más experiencia",
     touch: "toca un nodo",
     family: (label: string, n: number) => `${label}: ${n} habilidades`,
     skill: (label: string, n: number) => (n ? `${label}, usada en ${n} proyecto${n === 1 ? "" : "s"}` : label),
-    usedIn: (n: number) => `${n} proyecto${n === 1 ? "" : "s"}`,
   },
   portrait: {
     show: (name: string) => `Ver a ${name} de chico`,
@@ -153,7 +138,7 @@ const es: Dict = {
   },
   gallery: {
     title: "Fotografía",
-    hint: "elige una foto para verla",
+    instagram: "Más en Instagram",
     open: (i: string, alt: string) => `Abrir foto ${i}${alt ? `: ${alt}` : ""}`,
     dialog: (i: number, n: number) => `Foto ${i} de ${n}`,
     close: "cerrar [esc]",
@@ -163,14 +148,7 @@ const es: Dict = {
     nextLabel: "Foto siguiente",
   },
   footer: {
-    contact: "Contacto",
-    fallbackTitle: "Escríbeme",
-    linkedin: "LinkedIn",
-    cv: "CV",
-    download: "descargar .pdf",
-    email: "Email",
-    write: "escribir",
-    top: "↑ arriba",
+    designedBy: "Diseñado por",
   },
   meta: {
     description: (intro?: string) => intro ?? "",

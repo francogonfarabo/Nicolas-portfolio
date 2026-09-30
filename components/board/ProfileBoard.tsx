@@ -80,7 +80,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
             <Stat label={t.profile.projects} value={work.projects.length} />
             <Stat label={t.profile.certifications} value={work.certificates.length} />
             <Stat label={t.profile.skillsMapped} value={skillCount} />
-            {work.languages.length > 0 && <Stat label={t.profile.languages} value={work.languages.length} />}
           </dl>
         </div>
 

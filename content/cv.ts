@@ -51,11 +51,7 @@ export const profile: RawProfile = {
   email: "NicolasGF@outlook.com.ar",
   linkedin: "https://www.linkedin.com/in/nicolas-gonzalez-farabollini/",
   cvUrl: "/Nicolas-Gonzalez-Farabollini-CV.pdf",
-  contactTitle: { en: "Got a system that needs untangling?", es: "¿Hay un sistema que necesite desenredarse?" },
-  contactBody: {
-    en: "Pipelines, clouds, even a live broadcast studio. Nico would love to take a look.",
-    es: "Pipelines, nubes, incluso un estudio de transmisión en vivo. A Nico le encantaría darle una mirada.",
-  },
+  instagram: "https://www.instagram.com/gonzalezfarabollini/",
 };
 
 export const work: RawWork = {

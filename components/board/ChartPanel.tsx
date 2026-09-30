@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import type { Profile, Skills } from "@/content/types";
 import RadialChart from "../skills/RadialChart";
-import SkillList from "../skills/SkillList";
 import Portrait, { ChildhoodNote, SCALE } from "./Portrait";
 import { useI18n } from "../I18n";
 
@@ -36,9 +34,7 @@ export default function ChartPanel({
   onPortraitHover: (on: boolean) => void;
   onPortraitToggle: () => void;
 }) {
-  const reduce = useReducedMotion();
   const { t } = useI18n();
-  const [showList, setShowList] = useState(false);
 
   return (
     <div id="skills" role="region" aria-labelledby="skills-title" className="ticks flex flex-col border border-line bg-white">
@@ -60,15 +56,6 @@ export default function ChartPanel({
             </li>
           ))}
         </ul>
-        <button
-          type="button"
-          onClick={() => setShowList((s) => !s)}
-          aria-expanded={showList}
-          aria-controls="skill-list"
-          className="ml-auto px-1.5 py-0.5 font-mono text-[10.5px] text-ink uppercase transition-colors hover:bg-surface aria-expanded:bg-ink aria-expanded:text-white"
-        >
-          {showList ? t.chart.close : t.chart.list}
-        </button>
       </div>
 
       {/* Chart */}
@@ -128,21 +115,6 @@ export default function ChartPanel({
           {t.chart.key}
         </p>
 
-        {/* Read-only list, over the chart */}
-        <AnimatePresence>
-          {showList && (
-            <motion.div
-              key="list"
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              className="absolute inset-0 z-10 overflow-y-auto overscroll-contain bg-white/97 p-4"
-            >
-              <SkillList id="skill-list" categories={skills.categories} usage={usage} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

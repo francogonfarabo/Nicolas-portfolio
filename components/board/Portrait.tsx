@@ -7,7 +7,7 @@ import type { Profile } from "@/content/types";
 import { useI18n } from "../I18n";
 
 /** How much the portrait grows while the childhood photo shows. */
-const SCALE = 1.6;
+export const SCALE = 1.6;
 /** Zoom into the childhood photo around its focal point (Sanity hotspot). */
 const KID_ZOOM = 1.9;
 /** Reveal radius, as a multiple of the portrait size. √2 reaches the far corner from any entry point. */
@@ -23,14 +23,12 @@ export default function Portrait({
   revealed,
   onHover,
   onToggle,
-  showHint,
 }: {
   profile: Profile;
   size: number;
   revealed: boolean;
   onHover: (on: boolean) => void;
   onToggle: () => void;
-  showHint: boolean;
 }) {
   const reduce = useReducedMotion();
   const { t } = useI18n();
@@ -62,85 +60,73 @@ export default function Portrait({
   const pos = (f?: { x: number; y: number }) => (f ? `${f.x * 100}% ${f.y * 100}%` : "50% 50%");
 
   return (
-    <>
-      <motion.button
-        ref={ref}
-        type="button"
-        aria-expanded={revealed}
-        aria-controls="childhood-note"
-        aria-label={revealed ? t.portrait.hide : t.portrait.show(profile.shortName)}
-        disabled={!kid}
-        onPointerEnter={(e) => {
-          if (e.pointerType !== "mouse") return;
+    <motion.button
+      ref={ref}
+      type="button"
+      aria-expanded={revealed}
+      aria-controls="childhood-note"
+      aria-label={revealed ? t.portrait.hide : t.portrait.show(profile.shortName)}
+      disabled={!kid}
+      onPointerEnter={(e) => {
+        if (e.pointerType !== "mouse") return;
+        origin(e.clientX, e.clientY);
+        onHover(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType !== "mouse") return;
+        origin(e.clientX, e.clientY);
+        onHover(false);
+      }}
+      onClick={(e) => {
+        if (e.detail === 0) {
+          cx.set(size / 2);
+          cy.set(size / 2);
+        } else if (e.nativeEvent instanceof PointerEvent && e.nativeEvent.pointerType !== "mouse") {
           origin(e.clientX, e.clientY);
-          onHover(true);
-        }}
-        onPointerLeave={(e) => {
-          if (e.pointerType !== "mouse") return;
-          origin(e.clientX, e.clientY);
-          onHover(false);
-        }}
-        onClick={(e) => {
-          if (e.detail === 0) {
-            cx.set(size / 2);
-            cy.set(size / 2);
-          } else if (e.nativeEvent instanceof PointerEvent && e.nativeEvent.pointerType !== "mouse") {
-            origin(e.clientX, e.clientY);
-          }
-          onToggle();
-        }}
-        className="absolute block -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white p-[3px] ring-1 ring-line-2 disabled:cursor-default"
-        style={{ width: size + 6, height: size + 6 }}
-        animate={{ scale: revealed ? SCALE : 1 }}
-        transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 170, damping: 22 }}
-      >
-        <span className="relative block size-full overflow-hidden rounded-full bg-surface">
-          <Image
-            src={profile.portrait.src}
-            alt={profile.portrait.alt}
-            fill
-            loading="eager"
-            fetchPriority="high"
-            placeholder={profile.portrait.blurDataURL ? "blur" : "empty"}
-            blurDataURL={profile.portrait.blurDataURL}
-            sizes={`${Math.round(size * SCALE)}px`}
-            className="object-cover"
-            style={{ objectPosition: pos(profile.portrait.focus) }}
-          />
-          {kid && (
-            <motion.span className="absolute inset-0 block overflow-hidden" style={{ clipPath: clip }} aria-hidden={!revealed}>
-              <Image
-                src={kid.src}
-                alt={kid.alt}
-                fill
-                loading="eager"
-                placeholder={kid.blurDataURL ? "blur" : "empty"}
-                blurDataURL={kid.blurDataURL}
-                // Load enough pixels for the zoom, or it goes soft.
-                sizes={`${Math.round(size * SCALE * KID_ZOOM)}px`}
-                className="object-cover"
-                style={{
-                  objectPosition: pos(kid.focus),
-                  transform: `scale(${KID_ZOOM})`,
-                  transformOrigin: pos(kid.focus),
-                }}
-              />
-            </motion.span>
-          )}
-        </span>
-      </motion.button>
-
-      {kid && showHint && (
-        <p
-          aria-hidden
-          className="pointer-events-none absolute left-0 -translate-x-1/2 font-mono text-[10px] tracking-wide whitespace-nowrap text-ink-3 uppercase transition-opacity duration-300"
-          style={{ top: size / 2 + 14, opacity: revealed ? 0 : 1 }}
-        >
-          <span className="pointer-coarse:hidden">{t.portrait.hintPointer}</span>
-          <span className="hidden pointer-coarse:inline">{t.portrait.hintTouch}</span>
-        </p>
-      )}
-    </>
+        }
+        onToggle();
+      }}
+      className="absolute block -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white p-[3px] ring-1 ring-line-2 disabled:cursor-default"
+      style={{ width: size + 6, height: size + 6 }}
+      // Grow upward: the bottom edge stays put, so nothing below the chart gets covered.
+      animate={{ scale: revealed ? SCALE : 1, y: revealed ? -((SCALE - 1) * (size + 6)) / 2 : 0 }}
+      transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 170, damping: 22 }}
+    >
+      <span className="relative block size-full overflow-hidden rounded-full bg-surface">
+        <Image
+          src={profile.portrait.src}
+          alt={profile.portrait.alt}
+          fill
+          loading="eager"
+          fetchPriority="high"
+          placeholder={profile.portrait.blurDataURL ? "blur" : "empty"}
+          blurDataURL={profile.portrait.blurDataURL}
+          sizes={`${Math.round(size * SCALE)}px`}
+          className="object-cover"
+          style={{ objectPosition: pos(profile.portrait.focus) }}
+        />
+        {kid && (
+          <motion.span className="absolute inset-0 block overflow-hidden" style={{ clipPath: clip }} aria-hidden={!revealed}>
+            <Image
+              src={kid.src}
+              alt={kid.alt}
+              fill
+              loading="eager"
+              placeholder={kid.blurDataURL ? "blur" : "empty"}
+              blurDataURL={kid.blurDataURL}
+              // Load enough pixels for the zoom, or it goes soft.
+              sizes={`${Math.round(size * SCALE * KID_ZOOM)}px`}
+              className="object-cover"
+              style={{
+                objectPosition: pos(kid.focus),
+                transform: `scale(${KID_ZOOM})`,
+                transformOrigin: pos(kid.focus),
+              }}
+            />
+          </motion.span>
+        )}
+      </span>
+    </motion.button>
   );
 }
 

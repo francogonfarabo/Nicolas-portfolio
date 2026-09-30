@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Profile, Skills } from "@/content/types";
 import RadialChart from "../skills/RadialChart";
 import SkillList from "../skills/SkillList";
-import Portrait, { ChildhoodNote } from "./Portrait";
+import Portrait, { ChildhoodNote, SCALE } from "./Portrait";
 import { useI18n } from "../I18n";
 
 /**
@@ -36,7 +36,6 @@ export default function ChartPanel({
 }) {
   const reduce = useReducedMotion();
   const { t } = useI18n();
-  const [touched, setTouched] = useState(false);
   const [showList, setShowList] = useState(false);
 
   return (
@@ -71,14 +70,14 @@ export default function ChartPanel({
       </div>
 
       {/* Chart */}
-      <div className="dot-grid relative h-(--chart-area) px-3 pt-2">
+      {/* --chart-h is set by ProfileBoard while scrolling (it shrinks toward --chart-area-compact) */}
+      <div className="dot-grid relative h-[var(--chart-h,var(--chart-area))] px-3 pt-2">
         <p id="skills-desc" className="sr-only">
           {t.chart.description}
         </p>
         <RadialChart
           categories={skills.categories}
           rings={skills.rings}
-          onFirstTouch={() => setTouched(true)}
           highlight={highlight}
           onActive={onActiveSkill}
           pulse={pulse}
@@ -93,25 +92,35 @@ export default function ChartPanel({
               revealed={revealed}
               onHover={onPortraitHover}
               onToggle={onPortraitToggle}
-              showHint={!touched}
             />
           )}
-          renderOverlay={(f) => (
-            <AnimatePresence>
-              {revealed && (
-                <div
-                  className="pointer-events-none absolute -translate-x-1/2"
-                  style={{
-                    left: f.cx,
-                    bottom: f.height - f.cy + (f.root * 1.6) / 2 + (f.compact ? 10 : 18),
-                    width: Math.min(560, f.width - 16),
-                  }}
-                >
-                  <ChildhoodNote key="note" profile={profile} compact={f.compact} />
-                </div>
-              )}
-            </AnimatePresence>
-          )}
+          renderOverlay={(f) => {
+            // The grown portrait's top edge (it grows upward from its bottom edge).
+            const above = f.height - f.cy + f.root / 2 + f.root * (SCALE - 1);
+            const tight = f.compact || f.height - above < 130;
+            return (
+              <AnimatePresence>
+                {revealed && (
+                  <div
+                    className="pointer-events-none absolute -translate-x-1/2"
+                    style={{
+                      left: f.cx,
+                      bottom: above + (tight ? 10 : 18),
+                      width: tight ? f.width + 20 : Math.min(560, f.width - 16),
+                    }}
+                  >
+                    <ChildhoodNote
+                      key="note"
+                      profile={profile}
+                      compact={tight}
+                      // When space is short the quote can rise over the legend: keep it legible.
+                      className={tight ? "bg-white/95 px-4 py-1.5" : ""}
+                    />
+                  </div>
+                )}
+              </AnimatePresence>
+            );
+          }}
         />
 
         {/* Read-only list, over the chart */}

@@ -8,7 +8,7 @@ import { useI18n } from "./I18n";
 
 const idx = (i: number) => String(i + 1).padStart(2, "0");
 
-export default function Gallery({ gallery }: { gallery: GalleryData }) {
+export default function Gallery({ gallery, instagram }: { gallery: GalleryData; instagram?: string }) {
   const { t } = useI18n();
   const [open, setOpen] = useState<number | null>(null);
   const thumbs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -34,7 +34,19 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
             </h2>
             {gallery.intro && <p className="mt-2 max-w-md text-[14px] text-ink-2">{gallery.intro}</p>}
           </div>
-          <p className="font-mono text-[11px] text-ink-3">{t.gallery.hint}</p>
+          {instagram && (
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] text-ink-2 uppercase transition-colors hover:text-ink"
+            >
+              {t.gallery.instagram}
+              <span className="normal-case text-ink-3">@{instagram.replace(/\/+$/, "").split("/").pop()}</span>
+              <span aria-hidden>↗</span>
+              <span className="sr-only"> {t.newTab}</span>
+            </a>
+          )}
         </div>
 
         <JustifiedGrid ratios={photos.map((p) => p.width / p.height)}>
@@ -50,7 +62,7 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
                   type="button"
                   onClick={() => setOpen(i)}
                   className="block w-full cursor-zoom-in text-left"
-                  aria-label={t.gallery.open(idx(i), p.title)}
+                  aria-label={t.gallery.open(idx(i), p.alt)}
                 >
                   <span className="relative block overflow-hidden bg-surface" style={{ aspectRatio: ratio }}>
                     <Image
@@ -63,10 +75,6 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
                       className="object-cover transition-transform duration-700 ease-(--ease-out-soft) group-hover/photo:scale-[1.025]"
                       style={{ objectPosition: p.focus ? `${p.focus.x * 100}% ${p.focus.y * 100}%` : undefined }}
                     />
-                  </span>
-                  <span className="mt-2 flex items-baseline gap-3 font-mono text-[11px]">
-                    <span className="text-ink-3 tabular">{idx(i)}</span>
-                    <span className="truncate text-ink-2 transition-colors group-hover/photo:text-ink">{p.title}</span>
                   </span>
                 </button>
               </li>
@@ -81,7 +89,6 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
 }
 
 const GAP = 8;
-const CAPTION = 26;
 
 /**
  * Splits photos (in order) into rows of near-equal total aspect ratio, so every row
@@ -152,7 +159,7 @@ function JustifiedGrid({
             const h = Math.min((width - GAP * (row.length - 1) - 1) / sum, target * 1.6);
             return (
               <ul key={ri} className="flex" style={{ gap: GAP }}>
-                {row.map((i) => children(i, { width: ratios[i] * h, flex: "none", minHeight: h + CAPTION }))}
+                {row.map((i) => children(i, { width: ratios[i] * h, flex: "none" }))}
               </ul>
             );
           })}
@@ -219,7 +226,7 @@ function Lightbox({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={t.gallery.dialog(index + 1, photos.length, p.title)}
+      aria-label={t.gallery.dialog(index + 1, photos.length)}
       className="fixed inset-0 z-[70] flex flex-col bg-[#0a0a0a] text-white"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -263,7 +270,6 @@ function Lightbox({
         <button type="button" onClick={() => go(-1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label={t.gallery.prevLabel}>
           {t.gallery.prev}
         </button>
-        <p className="truncate text-white/90">{p.title}</p>
         <button type="button" onClick={() => go(1)} className="px-2 py-1 text-white/80 uppercase transition-colors hover:bg-white/10 hover:text-white" aria-label={t.gallery.nextLabel}>
           {t.gallery.next}
         </button>

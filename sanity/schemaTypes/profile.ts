@@ -52,6 +52,13 @@ export const profile = defineType({
     defineField({ name: "email", type: "string", group: "contact", validation: (r) => r.required().email() }),
     defineField({ name: "linkedin", title: "LinkedIn URL", type: "url", group: "contact" }),
     defineField({
+      name: "instagram",
+      title: "Instagram URL",
+      description: "Linked from the Photography section.",
+      type: "url",
+      group: "contact",
+    }),
+    defineField({
       name: "cvFile",
       title: "CV (PDF, English)",
       type: "file",

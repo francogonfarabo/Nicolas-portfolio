@@ -13,7 +13,7 @@ export const skills = defineType({
       title: "Skill families",
       type: "array",
       description:
-        "Each family is a hollow node; its skills fan out from it. Order here = order around the arc, left to right.",
+        "Each family is a hollow node; its skills fan out from it. Order here = order around the arc, left to right. Keep short skill names at both ends (e.g. AWS, Git) and long ones in the middle, so the chart can stay large.",
       of: [
         defineArrayMember({
           type: "object",

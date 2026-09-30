@@ -23,17 +23,24 @@
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* The pinned skills map: chart area height, and the whole pinned block (title bar + padding). */
+/*
+  The pinned skills map.
+  --chart-area: chart height at rest. --chart-area-compact: the height it shrinks to while the
+  work history scrolls under it. Short screens shrink proportionally more (see ProfileBoard).
+  --panel-h: the pinned block without the header (fallback; ProfileBoard measures the real one).
+*/
 :root {
   color-scheme: light;
   --header-h: 48px;
   --chart-area: clamp(240px, 36svh, 290px);
-  --panel-h: calc(var(--chart-area) + 64px);
+  --chart-area-compact: clamp(150px, calc(26svh - 20px), 220px);
+  --panel-h: calc(var(--chart-area-compact) + 110px);
 }
 @media (min-width: 640px) {
   :root {
     --chart-area: clamp(300px, 50svh, 500px);
-    --panel-h: calc(var(--chart-area) + 50px);
+    --chart-area-compact: clamp(180px, calc(34svh - 45px), 320px);
+    --panel-h: calc(var(--chart-area-compact) + 96px);
   }
 }
 
@@ -62,7 +69,7 @@ body {
   outline-offset: 2px;
 }
 /* Chart nodes draw their own focus ring */
-svg [role="slider"]:focus-visible {
+svg [role="img"]:focus-visible {
   outline: none;
 }
 

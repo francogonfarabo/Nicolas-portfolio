@@ -37,7 +37,7 @@ export default async function SitePage({ locale }: { locale: Locale }) {
       <Header profile={content.profile} locale={locale} />
       <main>
         <ProfileBoard profile={content.profile} work={content.work} skills={content.skills} />
-        <Gallery gallery={content.gallery} />
+        <Gallery gallery={content.gallery} instagram={content.profile.instagram} />
       </main>
       <Footer profile={content.profile} locale={locale} />
       <ConsoleHello name={content.profile.shortName} />

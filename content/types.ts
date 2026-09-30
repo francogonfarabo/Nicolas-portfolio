@@ -34,6 +34,7 @@ export type Profile = {
   childhoodQuote?: string;
   email: string;
   linkedin?: string;
+  instagram?: string;
   cvUrl?: string;
   contactTitle?: string;
   contactBody?: string;
@@ -103,6 +104,7 @@ export type RawProfile = {
   childhoodQuote?: L;
   email: string;
   linkedin?: string;
+  instagram?: string;
   /** English CV; `cvUrlEs` is optional and used on the Spanish page when present. */
   cvUrl?: string;
   cvUrlEs?: string;

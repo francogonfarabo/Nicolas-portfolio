@@ -21,8 +21,6 @@ import { useI18n } from "../I18n";
 type Props = {
   categories: SkillCategory[];
   rings: Skills["rings"];
-  /** First time someone grabs a node. */
-  onFirstTouch: () => void;
   /** Skill keys to emphasise (e.g. the project under the pointer). */
   highlight: Set<string> | null;
   /** Reports the leaf under the pointer / being dragged / focused. */
@@ -57,7 +55,6 @@ const hash = (s: string) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0))
 export default function RadialChart({
   categories,
   rings,
-  onFirstTouch,
   highlight,
   onActive,
   pulse,
@@ -232,9 +229,10 @@ export default function RadialChart({
     [],
   );
 
-  // Snap (don't spring) on resize, so the chart doesn't swim when the window changes.
+  // Snap (don't spring) on resize, before paint, so the chart doesn't swim when the window
+  // changes or when it shrinks while scrolling.
   const prevSize = useRef("");
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!frame || !bloomed) return;
     const key = `${frame.width}x${frame.height}`;
     if (prevSize.current && prevSize.current !== key) {
@@ -245,6 +243,7 @@ export default function RadialChart({
           b.v = { x: 0, y: 0 };
         }
       }
+      setTick((n) => (n + 1) % 1e6);
     }
     prevSize.current = key;
   }, [frame, bloomed, slots, targetFor]);
@@ -271,7 +270,6 @@ export default function RadialChart({
     drag.current = { id: s.id, kind: s.kind, pointerId: e.pointerId, pos: polar(frame, angle, radius) };
     setDragId(s.id);
     setRovingId(s.id);
-    onFirstTouch();
     kick();
   };
 
@@ -333,6 +331,8 @@ export default function RadialChart({
     }
     return "neutral";
   };
+
+  const litLeaves = highlight ? slots.filter((s) => s.kind === "leaf" && highlight.has(s.id)) : [];
 
   const pos = (id: string) => bodies.current.get(id)?.p ?? (frame ? { x: frame.cx, y: frame.cy } : { x: 0, y: 0 });
   const valueOf = (s: Slot) => (s.kind === "leaf" ? values[s.id] : meanOf(s.id));
@@ -525,9 +525,10 @@ export default function RadialChart({
           </div>
 
           {frame.compact && (
+            // No room for labels: name the active node, or the lit ones, at the top of the area.
             <div
-              className="pointer-events-none absolute top-0 left-0 font-mono text-[11px] transition-opacity"
-              style={{ opacity: dimmed ? 0 : 1 }}
+              className="pointer-events-none absolute left-0 max-w-full font-mono text-[11px] transition-opacity"
+              style={{ top: fitHeight && box.h ? Math.min(0, frame.height - box.h) : 0, opacity: dimmed ? 0 : 1 }}
               aria-hidden
             >
               {activeSlot ? (
@@ -536,8 +537,20 @@ export default function RadialChart({
                   {activeSlot.label}
                   <span className="text-ink-3 tabular">{valueOf(activeSlot)}</span>
                 </span>
+              ) : litLeaves.length ? (
+                <span className="flex flex-wrap gap-x-3 gap-y-0.5 py-1 text-ink">
+                  {litLeaves.map((s) => (
+                    <span key={s.id} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="size-1.5" style={{ background: s.color }} />
+                      {s.label}
+                    </span>
+                  ))}
+                </span>
               ) : (
-                <span className="text-ink-3">{t.chart.touch}</span>
+                <span className="text-ink-3">
+                  <span className="pointer-coarse:hidden">{t.chart.hover}</span>
+                  <span className="hidden pointer-coarse:inline">{t.chart.touch}</span>
+                </span>
               )}
             </div>
           )}

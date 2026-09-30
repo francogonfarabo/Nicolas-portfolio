@@ -43,9 +43,9 @@ export default function WorkPanel({
   const usedIn = activeSkill ? work.projects.filter((p) => p.skills.includes(activeSkill)).length : 0;
 
   return (
-    <div id="work" className="scroll-mt-[calc(var(--header-h)+var(--panel-h))] pt-6 pb-16">
+    <div id="work" className="scroll-mt-[var(--stuck-offset,var(--panel-h))] pt-6 pb-16">
       {/* Roles */}
-      <Block title={t.work.experience} aside={earliest ? `${earliest} — ${t.work.present}` : undefined} id="experience-title">
+      <Block title={t.work.experience} aside={earliest ? `${earliest} — ${t.work.present}` : undefined} id="experience-title" anchor="experience">
         <ol className="divide-y divide-line">
           {work.roles.map((r) => (
             <li key={r.title + r.org} className="grid gap-x-6 gap-y-1 py-5 first:pt-0 sm:grid-cols-[8.5rem_minmax(0,1fr)]">
@@ -88,6 +88,7 @@ export default function WorkPanel({
             : t.work.rowHint
         }
         id="projects-title"
+        anchor="projects"
       >
         <ul className="border-t border-line" onPointerLeave={() => onProjectHover(null)}>
           {work.projects.map((p, i) => (
@@ -106,7 +107,7 @@ export default function WorkPanel({
       </Block>
 
       {/* Credentials */}
-      <Block title={t.work.certifications} count={work.certificates.length} id="certs-title">
+      <Block title={t.work.certifications} count={work.certificates.length} id="certs-title" anchor="certifications">
         <ul className="border-t border-line">
           {work.certificates.map((c) => (
             <li key={c.name} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-baseline gap-x-4 border-b border-line py-2.5 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto] sm:gap-x-6">
@@ -126,7 +127,7 @@ export default function WorkPanel({
 
       <div className="grid gap-x-10 sm:grid-cols-2">
         {work.education?.degree && (
-          <Block title={t.work.education} id="edu-title">
+          <Block title={t.work.education} id="edu-title" anchor="education">
             <div className="border-t border-line py-3">
               <p className="font-mono text-[11px] text-ink-3 uppercase tabular">
                 {work.education.start} — {work.education.end}
@@ -140,7 +141,7 @@ export default function WorkPanel({
           </Block>
         )}
         {work.languages.length > 0 && (
-          <Block title={t.work.languages} id="lang-title">
+          <Block title={t.work.languages} id="lang-title" anchor="languages">
             <ul className="border-t border-line">
               {work.languages.map((l) => (
                 <li key={l.name} className="flex items-baseline justify-between gap-4 border-b border-line py-2.5">
@@ -161,16 +162,19 @@ function Block({
   count,
   aside,
   id,
+  anchor,
   children,
 }: {
   title: string;
   count?: number;
   aside?: string;
   id: string;
+  /** Target for the section chips (see SectionChips). */
+  anchor: string;
   children: React.ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className="mb-12 last:mb-0">
+    <section id={anchor} aria-labelledby={id} data-section className="mb-12 scroll-mt-[var(--stuck-offset,var(--panel-h))] last:mb-0">
       <div className="mb-4 flex items-baseline justify-between gap-4">
         <h2 id={id} className="meta !text-ink">
           {title}

@@ -72,7 +72,7 @@ export default function ChartPanel({
       </div>
 
       {/* Chart */}
-      <div className="dot-grid relative h-(--chart-area) px-3 pt-2">
+      <div className="dot-grid relative px-3 pt-2">
         <p id="skills-desc" className="sr-only">
           {t.chart.description}
         </p>
@@ -95,23 +95,28 @@ export default function ChartPanel({
               onToggle={onPortraitToggle}
             />
           )}
-          renderOverlay={(f) => (
-            <AnimatePresence>
-              {revealed && (
-                <div
-                  className="pointer-events-none absolute -translate-x-1/2"
-                  style={{
-                    left: f.cx,
-                    // Above the grown portrait (it grows upward from its bottom edge).
-                    bottom: f.height - f.cy + f.root / 2 + f.root * (SCALE - 1) + (f.compact ? 10 : 18),
-                    width: Math.min(560, f.width - 16),
-                  }}
-                >
-                  <ChildhoodNote key="note" profile={profile} compact={f.compact} />
-                </div>
-              )}
-            </AnimatePresence>
-          )}
+          renderOverlay={(f) => {
+            // Above the grown portrait (it grows upward from its bottom edge).
+            const above = f.height - f.cy + f.root / 2 + f.root * (SCALE - 1);
+            // Short chart: smaller quote, on white, since it may rise over the legend.
+            const tight = f.compact || f.height - above < 150;
+            return (
+              <AnimatePresence>
+                {revealed && (
+                  <div
+                    className="pointer-events-none absolute -translate-x-1/2"
+                    style={{
+                      left: f.cx,
+                      bottom: above + (tight ? 10 : 18),
+                      width: tight ? f.width + 20 : Math.min(560, f.width - 16),
+                    }}
+                  >
+                    <ChildhoodNote key="note" profile={profile} compact={tight} className={tight ? "bg-white/95 px-4 py-1.5" : ""} />
+                  </div>
+                )}
+              </AnimatePresence>
+            );
+          }}
         />
 
         {/* The only key the chart needs: what distance means. Deliberately no scale. */}

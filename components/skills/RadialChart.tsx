@@ -26,7 +26,7 @@ type Props = {
   /** Reports the leaf under the pointer / being dragged / focused. */
   onActive?: (key: string | null) => void;
   pulse: { id: string; key: number } | null;
-  /** Fit inside the parent's height. */
+  /** Never taller than --chart-area (the box then hugs the chart, so there's no empty band). */
   fitHeight: boolean;
   /** Fade the chart (the portrait easter egg is showing). */
   dimmed: boolean;
@@ -67,6 +67,7 @@ export default function RadialChart({
   const reduce = !!useReducedMotion();
   const { t } = useI18n();
   const wrapRef = useRef<HTMLDivElement>(null);
+  const capRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [bloomed, setBloomed] = useState(false);
@@ -99,13 +100,16 @@ export default function RadialChart({
   const raf = useRef<number | null>(null);
 
   // --- measure ---------------------------------------------------------
+  // Width from the wrapper; the height cap from an invisible probe sized to --chart-area,
+  // so the wrapper can take the chart's own height without feeding back into the layout.
   useLayoutEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([e]) =>
-      setBox({ w: Math.round(e.contentRect.width), h: Math.round(e.contentRect.height) }),
-    );
+    const measure = () => setBox({ w: Math.round(el.clientWidth), h: Math.round(capRef.current?.clientHeight ?? 0) });
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (capRef.current) ro.observe(capRef.current);
+    measure();
     return () => ro.disconnect();
   }, []);
 
@@ -334,12 +338,15 @@ export default function RadialChart({
     s.kind === "hub" ? t.chart.family(s.label, children.get(s.id)?.length ?? 0) : t.chart.skill(s.label, usage[s.id] ?? 0);
 
   return (
-    <div ref={wrapRef} className={`relative w-full select-none ${fitHeight ? "h-full" : ""}`}>
+    <div
+      ref={wrapRef}
+      className="relative w-full select-none"
+      // Before the first measure (server render), reserve the cap so nothing jumps much.
+      style={!frame && fitHeight ? { height: "var(--chart-area)" } : undefined}
+    >
+      {fitHeight && <div ref={capRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 h-(--chart-area) w-px" />}
       {frame && (
-        <div
-          className={fitHeight ? "absolute bottom-0 left-1/2 -translate-x-1/2" : "relative mx-auto"}
-          style={{ width: frame.width, height: frame.height }}
-        >
+        <div className="relative mx-auto" style={{ width: frame.width, height: frame.height }}>
           <svg
             ref={svgRef}
             width={frame.width}

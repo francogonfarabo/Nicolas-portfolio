@@ -23,7 +23,8 @@
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* The pinned skills map: chart area height, and the whole pinned block (title bar + padding). */
+/* The pinned skills map: the most the chart may take (it shrinks to fit when width is the limit),
+   and a fallback height for the whole pinned block (ProfileBoard measures the real one). */
 :root {
   color-scheme: light;
   --header-h: 48px;

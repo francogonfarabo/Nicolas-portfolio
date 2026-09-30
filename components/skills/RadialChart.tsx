@@ -2,7 +2,7 @@
 
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
-import type { SkillCategory, Skills } from "@/content/types";
+import type { SkillCategory } from "@/content/types";
 import {
   CHAR_W,
   type Frame,
@@ -10,7 +10,6 @@ import {
   type Vec,
   clampToChart,
   hubValue,
-  levelName,
   makeFrame,
   polar,
   radiusFor,
@@ -20,9 +19,8 @@ import { useI18n } from "../I18n";
 
 type Props = {
   categories: SkillCategory[];
-  rings: Skills["rings"];
-  /** First time someone grabs a node. */
-  onFirstTouch: () => void;
+  /** How many projects used each skill (by key). */
+  usage: Record<string, number>;
   /** Skill keys to emphasise (e.g. the project under the pointer). */
   highlight: Set<string> | null;
   /** Reports the leaf under the pointer / being dragged / focused. */
@@ -43,21 +41,19 @@ type Drag = { id: string; kind: "hub" | "leaf"; pointerId: number; pos: Vec };
 
 const INK = "#0a0a0a";
 const INK_2 = "#525252";
-const INK_3 = "#737373";
 const LINE = "#e5e5e5";
 const LINE_2 = "#d4d4d4";
 
 const hash = (s: string) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
 
 /**
- * Nico's skills as a radial tree. The values are fixed: distance from the centre is
- * the skill level. Nodes can be grabbed and pulled around for fun, and always spring
- * back to their place on release.
+ * Nico's skills as a radial tree. Further out = more hands-on experience: an estimate,
+ * so there's deliberately no scale or number anywhere. Nodes can be grabbed and pulled
+ * around for fun, and always spring back to their place on release.
  */
 export default function RadialChart({
   categories,
-  rings,
-  onFirstTouch,
+  usage,
   highlight,
   onActive,
   pulse,
@@ -264,7 +260,6 @@ export default function RadialChart({
     drag.current = { id: s.id, kind: s.kind, pointerId: e.pointerId, pos: polar(frame, angle, radius) };
     setDragId(s.id);
     setRovingId(s.id);
-    onFirstTouch();
     kick();
   };
 
@@ -334,12 +329,9 @@ export default function RadialChart({
   });
 
   const pos = (id: string) => bodies.current.get(id)?.p ?? (frame ? { x: frame.cx, y: frame.cy } : { x: 0, y: 0 });
-  // Levels are estimates: described in words, never as numbers.
-  const describe = (s: Slot) => {
-    if (s.kind === "hub") return t.chart.family(s.label, children.get(s.id)?.length ?? 0);
-    const level = levelName(values[s.id] ?? 0, rings);
-    return level ? `${s.label}: ${level}` : s.label;
-  };
+  // Depth is an estimate, so it's never read out as a level: say where the skill was used instead.
+  const describe = (s: Slot) =>
+    s.kind === "hub" ? t.chart.family(s.label, children.get(s.id)?.length ?? 0) : t.chart.skill(s.label, usage[s.id] ?? 0);
 
   return (
     <div ref={wrapRef} className={`relative w-full select-none ${fitHeight ? "h-full" : ""}`}>
@@ -362,7 +354,7 @@ export default function RadialChart({
             onPointerCancel={endDrag}
             style={{ fontSize: frame.fontSize, opacity: dimmed ? 0.07 : 1 }}
           >
-            <Rings frame={frame} rings={rings} />
+            <Guides frame={frame} />
 
             {/* links */}
             <g fill="none" strokeLinecap="round">
@@ -513,33 +505,13 @@ export default function RadialChart({
   );
 }
 
-function Rings({ frame: f, rings }: { frame: Frame; rings: Skills["rings"] }) {
-  const tight = (f.r1 - f.r0) / Math.max(1, rings.length) < 70;
+/** Just the frame of the half-disc: the portrait's orbit, the outer edge and the horizon. No scale. */
+function Guides({ frame: f }: { frame: Frame }) {
+  const arc = (r: number) => `M${f.cx - r},${f.cy} A${r},${r} 0 0 1 ${f.cx + r},${f.cy}`;
   return (
-    <g aria-hidden>
-      {/* r0 guide: the portrait's orbit */}
-      <path d={`M${f.cx - f.r0},${f.cy} A${f.r0},${f.r0} 0 0 1 ${f.cx + f.r0},${f.cy}`} fill="none" stroke={LINE} />
-      {rings.map((ring, i) => {
-        const r = radiusFor(f, ring.value);
-        const outer = i === rings.length - 1;
-        const dy = tight && i % 2 ? 30 : 18;
-        return (
-          <g key={ring.value}>
-            <path
-              d={`M${f.cx - r},${f.cy} A${r},${r} 0 0 1 ${f.cx + r},${f.cy}`}
-              fill="none"
-              stroke={outer ? LINE_2 : LINE}
-              strokeDasharray={outer ? undefined : "2 4"}
-            />
-            <line x1={f.cx + r} x2={f.cx + r} y1={f.cy} y2={f.cy + 5} stroke={LINE_2} />
-            {!f.compact && ring.label && (
-              <text x={f.cx + r} y={f.cy + dy} textAnchor="middle" fill={INK_3} className="font-mono uppercase" style={{ fontSize: 9.5, letterSpacing: "0.06em" }}>
-                {ring.label}
-              </text>
-            )}
-          </g>
-        );
-      })}
+    <g aria-hidden fill="none">
+      <path d={arc(f.r0)} stroke={LINE} />
+      <path d={arc(f.r1)} stroke={LINE_2} />
       <line x1={f.cx - f.r1 - 10} x2={f.cx + f.r1 + 10} y1={f.cy} y2={f.cy} stroke={LINE_2} />
     </g>
   );

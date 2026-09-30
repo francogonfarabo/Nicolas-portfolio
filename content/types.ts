@@ -74,7 +74,7 @@ export type Work = {
 
 export type Skill = { key: string; label: string; value: number; basis?: string };
 export type SkillCategory = { id: string; label: string; color: string; skills: Skill[] };
-export type Skills = { categories: SkillCategory[]; rings: { value: number; label?: string }[] };
+export type Skills = { categories: SkillCategory[] };
 
 export type Photo = Img & { title: string };
 export type Gallery = { title?: string; intro?: string; photos: Photo[] };
@@ -141,7 +141,6 @@ export type RawWork = {
 };
 
 export type RawSkills = {
-  rings: { value: number; label?: L }[];
   categories: { id: string; label: L; color: string; skills: { key: string; label: L; value: number; basis?: string }[] }[];
 };
 

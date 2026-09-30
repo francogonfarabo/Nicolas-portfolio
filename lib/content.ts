@@ -35,7 +35,6 @@ const QUERY = defineQuery(`{
     languages[]{ name, level }
   },
   "skills": *[_id == "skills"][0]{
-    rings[]{ value, label },
     categories[]{ _key, label, color, skills[]{ key, label, value, basis } }
   },
   "gallery": *[_id == "gallery"][0]{ title, intro, "photos": photos[]${image} }
@@ -135,7 +134,6 @@ async function getRaw(): Promise<Raw & { source: SiteContent["source"] }> {
   const s = data?.skills;
   const skills: RawSkills = s?.categories?.length
     ? {
-        rings: clean(s.rings).length ? clean(s.rings) : localSkills.rings,
         categories: clean<any>(s.categories).map((c) => ({
           id: slug(c.label?.en ?? c._key),
           label: c.label ?? { en: "" },
@@ -216,7 +214,6 @@ export async function getContent(locale: Locale): Promise<SiteContent> {
       languages: w.languages.map((l) => ({ name: t(l.name) ?? "", level: t(l.level) })),
     },
     skills: {
-      rings: s.rings.map((r) => ({ value: r.value, label: t(r.label) })),
       categories: s.categories.map((c) => ({
         id: c.id,
         label: t(c.label) ?? "",

@@ -34,14 +34,15 @@ export const CHAR_W = 0.55; // average glyph width relative to font size (Geist)
 export function slotsFor(categories: SkillCategory[]): Slot[] {
   const margin = 0.09;
   const gap = 1.1;
-  const leafCount = categories.reduce((n, c) => n + c.skills.length, 0);
-  const units = Math.max(1, leafCount - 1 + gap * (categories.length - 1));
+  const filled = categories.filter((c) => c.skills.length);
+  const leafCount = filled.reduce((n, c) => n + c.skills.length, 0);
+  // Steps inside each family, plus one wider gap between families: spans the full half-circle.
+  const units = Math.max(1, leafCount - filled.length + gap * (filled.length - 1));
   const step = (Math.PI - margin * 2) / units;
 
   const slots: Slot[] = [];
   let a = Math.PI - margin;
-  categories.forEach((cat, ci) => {
-    if (!cat.skills.length) return;
+  filled.forEach((cat, ci) => {
     if (ci > 0) a -= step * gap;
     const leafSlots: Slot[] = cat.skills.map((s, i) => ({
       id: s.key,
@@ -61,8 +62,8 @@ export function slotsFor(categories: SkillCategory[]): Slot[] {
 }
 
 const R0_RATIO = 0.2;
-/** Room under the baseline for the lower half of the portrait and its hint. */
-const BOTTOM = 86;
+/** Room under the baseline for the lower half of the portrait. */
+const BOTTOM = 64;
 
 /**
  * Size the half-disc so every label (at its ORIGINAL value) fits the box.
@@ -138,8 +139,3 @@ export function clampToChart(f: Frame, p: Vec): { angle: number; radius: number 
 
 /** Hubs sit halfway between the centre and the average of their skills. */
 export const hubValue = (childValues: number[]) => childValues.reduce((a, b) => a + b, 0) / Math.max(1, childValues.length) / 2;
-
-export function levelName(value: number, rings: { value: number; label?: string }[]) {
-  const ring = rings.find((r) => value <= r.value) ?? rings[rings.length - 1];
-  return ring?.label ?? "";
-}

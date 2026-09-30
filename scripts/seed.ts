@@ -70,7 +70,6 @@ const docs = [
   {
     _id: "skills",
     _type: "skills",
-    rings: skills.rings.map((r) => ({ _type: "ring", _key: key(), ...r })),
     categories: skills.categories.map((c) => ({
       _type: "category",
       _key: key(),

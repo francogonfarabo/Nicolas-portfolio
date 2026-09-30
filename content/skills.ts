@@ -2,18 +2,14 @@
  * Local fallback for the skills chart, and the source for `npm run seed`.
  * Edit in the Studio (/studio → Skills chart) once Sanity has content.
  *
- * The CV doesn't state proficiency levels, so EVERY value is an estimate (see `basis`).
- * Colours were checked for colour-blind separation and 3:1 contrast on white; keep the order.
+ * The CV doesn't state proficiency levels, so EVERY value is an estimate (see `basis`); the site never shows it as a number.
+ * Colours were checked for colour-blind separation and 3:1 contrast on white; keep the colour order.
+ * Family and skill order sets the angle: short labels at the two ends, long ones on the diagonals,
+ * so the fan spans the whole half-circle and the chart stays large.
  */
 import type { RawSkills } from "./types";
 
 export const skills: RawSkills = {
-  rings: [
-    { value: 25, label: { en: "exploring", es: "inicial" } },
-    { value: 50, label: { en: "working", es: "intermedio" } },
-    { value: 75, label: { en: "proficient", es: "avanzado" } },
-    { value: 100, label: { en: "expert", es: "experto" } },
-  ],
   categories: [
     {
       id: "cloud",
@@ -49,40 +45,30 @@ export const skills: RawSkills = {
       ],
     },
     {
-      id: "cicd",
-      label: { en: "CI/CD" },
-      color: "#B45309",
-      skills: [
-        { key: "github-actions", label: { en: "GitHub Actions" }, value: 88, basis: "4 projects" },
-        { key: "bitbucket", label: { en: "Bitbucket Pipelines" }, value: 72, basis: "Metamorphix, Billd" },
-        { key: "amplify", label: { en: "Amplify" }, value: 60, basis: "Honest Game, eClose, Billd" },
-        { key: "codedeploy", label: { en: "CodeDeploy" }, value: 40, basis: "Listed in tools only" },
-        { key: "jenkins", label: { en: "Jenkins" }, value: 35, basis: "Listed in tools only" },
-      ],
-    },
-    {
       id: "observability",
       label: { en: "Quality", es: "Calidad" },
-      color: "#9333EA",
+      color: "#B45309",
       skills: [
         { key: "grafana", label: { en: "Grafana" }, value: 55, basis: "Metamorphix" },
         { key: "sonarqube", label: { en: "SonarQube" }, value: 55, basis: "CloudIX (self-hosted)" },
       ],
     },
     {
-      id: "scripting",
-      label: { en: "Scripting" },
-      color: "#4D7C0F",
+      id: "cicd",
+      label: { en: "CI/CD" },
+      color: "#9333EA",
       skills: [
-        { key: "git", label: { en: "Git" }, value: 80, basis: "Underpins every CI/CD project" },
-        { key: "bash", label: { en: "Bash" }, value: 75, basis: "Listed first in tools" },
-        { key: "python", label: { en: "Python" }, value: 55, basis: "Listed in tools" },
+        { key: "jenkins", label: { en: "Jenkins" }, value: 35, basis: "Listed in tools only" },
+        { key: "codedeploy", label: { en: "CodeDeploy" }, value: 40, basis: "Listed in tools only" },
+        { key: "amplify", label: { en: "Amplify" }, value: 60, basis: "Honest Game, eClose, Billd" },
+        { key: "bitbucket", label: { en: "Bitbucket Pipelines" }, value: 72, basis: "Metamorphix, Billd" },
+        { key: "github-actions", label: { en: "GitHub Actions" }, value: 88, basis: "4 projects" },
       ],
     },
     {
       id: "human",
       label: { en: "Soft skills", es: "Habilidades blandas" },
-      color: "#DB2777",
+      color: "#4D7C0F",
       skills: [
         {
           key: "troubleshooting",
@@ -97,6 +83,16 @@ export const skills: RawSkills = {
           basis: "Soft skill; many concurrent clients",
         },
         { key: "creativity", label: { en: "Creativity", es: "Creatividad" }, value: 85, basis: "Soft skill; audiovisual design degree" },
+      ],
+    },
+    {
+      id: "scripting",
+      label: { en: "Scripting" },
+      color: "#DB2777",
+      skills: [
+        { key: "python", label: { en: "Python" }, value: 55, basis: "Listed in tools" },
+        { key: "bash", label: { en: "Bash" }, value: 75, basis: "Listed first in tools" },
+        { key: "git", label: { en: "Git" }, value: 80, basis: "Underpins every CI/CD project" },
       ],
     },
   ],

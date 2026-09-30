@@ -13,7 +13,7 @@ export const skills = defineType({
       title: "Skill families",
       type: "array",
       description:
-        "Each family is a hollow node; its skills fan out from it. Order here = order around the arc, left to right.",
+        "Each family is a hollow node; its skills fan out from it. Order here = order around the arc, left to right. Keep short skill names at both ends (e.g. AWS, Git) and long ones in the middle, so the chart can stay large.",
       of: [
         defineArrayMember({
           type: "object",
@@ -49,8 +49,10 @@ export const skills = defineType({
                     }),
                     defineField({
                       name: "value",
+                      title: "Depth",
                       type: "number",
-                      description: "0–100. Distance from the centre of the chart.",
+                      description:
+                        "0–100: how far from the centre the skill sits (further out = more hands-on). An estimate; never shown as a number on the site.",
                       validation: (r) => r.required().min(0).max(100).integer(),
                     }),
                     defineField({
@@ -75,22 +77,6 @@ export const skills = defineType({
               subtitle: `${color} · ${(skills ?? []).length} skills`,
             }),
           },
-        }),
-      ],
-    }),
-    defineField({
-      name: "rings",
-      type: "array",
-      description: "Concentric guide rings, centre outwards.",
-      of: [
-        defineArrayMember({
-          type: "object",
-          name: "ring",
-          fields: [
-            defineField({ name: "value", type: "number", validation: (r) => r.required().min(1).max(100) }),
-            defineField({ name: "label", type: "localeString" }),
-          ],
-          preview: { select: { title: "label.en", subtitle: "value" } },
         }),
       ],
     }),

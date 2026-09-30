@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Profile, Skills } from "@/content/types";
 import RadialChart from "../skills/RadialChart";
 import SkillList from "../skills/SkillList";
-import Portrait, { ChildhoodNote } from "./Portrait";
+import Portrait, { ChildhoodNote, SCALE } from "./Portrait";
 import { useI18n } from "../I18n";
 
 /**
@@ -15,6 +15,7 @@ import { useI18n } from "../I18n";
  */
 export default function ChartPanel({
   skills,
+  usage,
   profile,
   highlight,
   onFamilyHover,
@@ -25,6 +26,7 @@ export default function ChartPanel({
   onPortraitToggle,
 }: {
   skills: Skills;
+  usage: Record<string, number>;
   profile: Profile;
   highlight: Set<string> | null;
   onFamilyHover: (id: string | null) => void;
@@ -36,7 +38,6 @@ export default function ChartPanel({
 }) {
   const reduce = useReducedMotion();
   const { t } = useI18n();
-  const [touched, setTouched] = useState(false);
   const [showList, setShowList] = useState(false);
 
   return (
@@ -77,8 +78,7 @@ export default function ChartPanel({
         </p>
         <RadialChart
           categories={skills.categories}
-          rings={skills.rings}
-          onFirstTouch={() => setTouched(true)}
+          usage={usage}
           highlight={highlight}
           onActive={onActiveSkill}
           pulse={pulse}
@@ -93,7 +93,6 @@ export default function ChartPanel({
               revealed={revealed}
               onHover={onPortraitHover}
               onToggle={onPortraitToggle}
-              showHint={!touched}
             />
           )}
           renderOverlay={(f) => (
@@ -103,7 +102,8 @@ export default function ChartPanel({
                   className="pointer-events-none absolute -translate-x-1/2"
                   style={{
                     left: f.cx,
-                    bottom: f.height - f.cy + (f.root * 1.6) / 2 + (f.compact ? 10 : 18),
+                    // Above the grown portrait (it grows upward from its bottom edge).
+                    bottom: f.height - f.cy + f.root / 2 + f.root * (SCALE - 1) + (f.compact ? 10 : 18),
                     width: Math.min(560, f.width - 16),
                   }}
                 >
@@ -113,6 +113,15 @@ export default function ChartPanel({
             </AnimatePresence>
           )}
         />
+
+        {/* The only key the chart needs: what distance means. Deliberately no scale. */}
+        <p
+          aria-hidden
+          className="pointer-events-none absolute right-3 bottom-2 font-mono text-[10px] tracking-wide text-ink-3 uppercase transition-opacity duration-300"
+          style={{ opacity: revealed ? 0 : 1 }}
+        >
+          {t.chart.key}
+        </p>
 
         {/* Read-only list, over the chart */}
         <AnimatePresence>
@@ -125,7 +134,7 @@ export default function ChartPanel({
               transition={{ duration: 0.18 }}
               className="absolute inset-0 z-10 overflow-y-auto overscroll-contain bg-white/97 p-4"
             >
-              <SkillList id="skill-list" categories={skills.categories} rings={skills.rings} />
+              <SkillList id="skill-list" categories={skills.categories} usage={usage} />
             </motion.div>
           )}
         </AnimatePresence>

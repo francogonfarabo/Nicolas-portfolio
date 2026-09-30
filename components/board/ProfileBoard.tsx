@@ -56,6 +56,12 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   const activeSections = useActiveSection(sections);
 
   const since = profile.since ? ` · ${t.profile.since(profile.since)}` : "";
+  /** How many projects used each skill: the chart's evidence of experience. */
+  const usage = useMemo(() => {
+    const n: Record<string, number> = {};
+    for (const p of work.projects) for (const k of p.skills) n[k] = (n[k] ?? 0) + 1;
+    return n;
+  }, [work]);
   const skillCount = skills.categories.reduce((n, c) => n + c.skills.length, 0);
 
   return (
@@ -63,15 +69,13 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         {/* Identity (scrolls away) */}
         <div className="pt-8 pb-7 sm:pt-12">
-          <p className="meta flex items-center gap-2">
-            <span aria-hidden className="size-1.5 bg-accent" />
+          <h1 className="text-[clamp(2.1rem,6.4vw,3.4rem)] leading-[1] font-medium tracking-[-0.04em] text-balance">
+            {profile.name}
+          </h1>
+          <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-2">
             {profile.role}
             {since}
           </p>
-          <h1 className="mt-4 text-[clamp(2.1rem,6.4vw,3.4rem)] leading-[1] font-medium tracking-[-0.04em] text-balance">
-            {profile.name}
-          </h1>
-          {profile.intro && <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-2">{profile.intro}</p>}
           <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-ink-3 uppercase">
             <Stat label={t.profile.projects} value={work.projects.length} />
             <Stat label={t.profile.certifications} value={work.certificates.length} />
@@ -84,6 +88,7 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
         <div id="pin-block" className="sticky top-(--header-h) z-30 -mx-4 bg-white px-4 pt-2 pb-1 sm:-mx-6 sm:px-6">
           <ChartPanel
             skills={skills}
+            usage={usage}
             profile={profile}
             highlight={highlight}
             onFamilyHover={setFamilyHover}

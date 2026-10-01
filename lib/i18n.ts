@@ -31,16 +31,12 @@ const en = {
   profile: {
     section: "Profile, skills and work history",
     since: (y: string) => `since ${y}`,
-    projects: "projects",
-    certifications: "certifications",
-    skillsMapped: "skills mapped",
   },
   chart: {
     title: "Skills",
     families: "Skill families",
     description:
       "Skills grouped by family. The further from the centre, the more hands-on experience. Use the arrow keys to move between skills; each one says how many projects used it.",
-    key: "further out · more hands-on",
     touch: "touch a node",
     family: (label: string, n: number) => `${label}: ${n} skills`,
     skill: (label: string, n: number) => (n ? `${label}, used in ${n} project${n === 1 ? "" : "s"}` : label),
@@ -101,16 +97,12 @@ const es: Dict = {
   profile: {
     section: "Perfil, habilidades y experiencia",
     since: (y: string) => `desde ${y}`,
-    projects: "proyectos",
-    certifications: "certificaciones",
-    skillsMapped: "habilidades",
   },
   chart: {
     title: "Habilidades",
     families: "Familias de habilidades",
     description:
       "Habilidades agrupadas por familia. Cuanto más lejos del centro, más experiencia práctica. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó.",
-    key: "más afuera · más experiencia",
     touch: "toca un nodo",
     family: (label: string, n: number) => `${label}: ${n} habilidades`,
     skill: (label: string, n: number) => (n ? `${label}, usada en ${n} proyecto${n === 1 ? "" : "s"}` : label),

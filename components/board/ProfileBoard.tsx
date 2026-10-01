@@ -62,7 +62,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
     for (const p of work.projects) for (const k of p.skills) n[k] = (n[k] ?? 0) + 1;
     return n;
   }, [work]);
-  const skillCount = skills.categories.reduce((n, c) => n + c.skills.length, 0);
 
   return (
     <section id="top" aria-label={t.profile.section} className="border-b border-line">
@@ -76,11 +75,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
             {profile.role}
             {since}
           </p>
-          <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-ink-3 uppercase">
-            <Stat label={t.profile.projects} value={work.projects.length} />
-            <Stat label={t.profile.certifications} value={work.certificates.length} />
-            <Stat label={t.profile.skillsMapped} value={skillCount} />
-          </dl>
         </div>
 
         {/* Skills map: pinned under the header */}
@@ -110,16 +104,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
         />
       </div>
     </section>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <dt className="sr-only">{label}</dt>
-      <dd className="text-ink tabular">{value}</dd>
-      <span aria-hidden>{label}</span>
-    </div>
   );
 }
 

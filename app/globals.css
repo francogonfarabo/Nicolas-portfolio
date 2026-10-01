@@ -24,7 +24,9 @@
 }
 
 /* The pinned skills map: the most the chart may take (it shrinks to fit when width is the limit),
-   and a fallback height for the whole pinned block (ProfileBoard measures the real one). */
+   and a fallback height for the whole pinned block (ProfileBoard measures the real one).
+   From sm up it follows the screen height: header + pinned block stay around 56% of the screen,
+   leaving the rest for reading (~140px is the header, title bar and chips). */
 :root {
   color-scheme: light;
   --header-h: 48px;
@@ -33,7 +35,7 @@
 }
 @media (min-width: 640px) {
   :root {
-    --chart-area: clamp(300px, 50svh, 500px);
+    --chart-area: clamp(260px, calc(56svh - 140px), 500px);
     --panel-h: calc(var(--chart-area) + 50px);
   }
 }

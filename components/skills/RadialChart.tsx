@@ -44,6 +44,9 @@ const INK_2 = "#525252";
 const LINE = "#e5e5e5";
 const LINE_2 = "#d4d4d4";
 
+/** The shortest the chart is laid out at; any shorter and it's scaled down whole. */
+const MIN_LAYOUT = 340;
+
 const hash = (s: string) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
 
 /**
@@ -77,10 +80,16 @@ export default function RadialChart({
   const [rovingId, setRovingId] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
 
-  const frame = useMemo<Frame | null>(
-    () => (box.w ? makeFrame(box.w, fitHeight && box.h ? box.h : undefined, categories) : null),
-    [box.w, box.h, fitHeight, categories],
-  );
+  // Short screens: the layout tightens down to MIN_LAYOUT; below that the whole chart is
+  // scaled down as one piece, so the labels shrink a little instead of disappearing.
+  const { frame, scale } = useMemo<{ frame: Frame | null; scale: number }>(() => {
+    if (!box.w) return { frame: null, scale: 1 };
+    const cap = fitHeight && box.h ? box.h : undefined;
+    if (!cap || cap >= MIN_LAYOUT) return { frame: makeFrame(box.w, cap, categories), scale: 1 };
+    const f = makeFrame(box.w, MIN_LAYOUT, categories);
+    if (f.compact) return { frame: makeFrame(box.w, cap, categories), scale: 1 };
+    return { frame: f, scale: Math.min(1, cap / f.height) };
+  }, [box.w, box.h, fitHeight, categories]);
   const slots = useMemo(() => slotsFor(categories), [categories]);
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
   const children = useMemo(() => {
@@ -245,7 +254,7 @@ export default function RadialChart({
   // --- dragging (play only; nothing is saved) ----------------------------------
   const local = (e: React.PointerEvent): Vec => {
     const r = svgRef.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+    return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
   };
 
   const onMove = (e: React.PointerEvent) => {
@@ -346,7 +355,15 @@ export default function RadialChart({
     >
       {fitHeight && <div ref={capRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 h-(--chart-area) w-px" />}
       {frame && (
-        <div className="relative mx-auto" style={{ width: frame.width, height: frame.height }}>
+        <div
+          className="relative mx-auto origin-top"
+          // Scaled from the top centre; the negative margin gives back the space it no longer needs.
+          style={{
+            width: frame.width,
+            height: frame.height,
+            ...(scale < 1 && { transform: `scale(${scale})`, marginBottom: (scale - 1) * frame.height }),
+          }}
+        >
           <svg
             ref={svgRef}
             width={frame.width}

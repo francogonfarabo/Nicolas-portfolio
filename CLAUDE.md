@@ -24,14 +24,15 @@ Designed and directed by **Franco Gonzalez Farabollini** (the user, a designer).
 
 ## Design direction (from the user)
 - White, technical aesthetic: Geist + Geist Mono, hairline borders, one orange accent. Playfulness **only** through easter eggs. **No rotated or tilted elements**, nothing cheesy.
-- Single centred column (`max-w-3xl`): name → the line "role · since 2019" → stats (projects, certifications, skills mapped) → **skills chart pinned under the header** with section chips beneath it → work history scrolling under the chart → photo gallery → a one-line footer credit.
+- Single centred column (`max-w-3xl`): name → the line "role · since 2019" → **skills chart pinned under the header** with section chips beneath it → work history scrolling under the chart → photo gallery → a one-line footer credit.
 - **Header:** Email and LinkedIn on the left; the EN/ES switch and CV.pdf on the right. No logo.
 - **Skills chart (`components/skills/RadialChart.tsx`, `geometry.ts`):** a radial tree with Nico's portrait as the root.
-  - It must read as an *estimate of experience, not a metric*: **no numbers, no scale, no level words** anywhere on the page. Distance from the centre ("depth" in Sanity) means more hands-on experience; the only key is "further out · more hands-on".
+  - It must read as an *estimate of experience, not a metric*: **no numbers, no scale, no level words** anywhere on the page. Distance from the centre ("depth" in Sanity) means more hands-on experience. There is no visible key; only the screen-reader description explains distance.
   - Values are fixed. Dragging a node is just for fun, and nodes spring back on release.
   - Hovering a dot, its connector or its label highlights that branch.
   - Linked to projects: hovering a project lights up its skills, and hovering a skill highlights the projects that used it. Screen readers get "used in N projects".
-  - The chart box hugs the chart; `--chart-area` is only a maximum height.
+  - The chart box hugs the chart; `--chart-area` is only a maximum height. From `sm` up it follows the screen height (`clamp(260px, 56svh - 140px, 500px)`), so on laptops the header plus pinned block stay around 56% of the screen and the rest is left for reading.
+  - When the cap is under `MIN_LAYOUT` (340px, in `RadialChart.tsx`), the chart is laid out at 340px and scaled down whole (CSS transform), so labels shrink a little instead of disappearing. Mobile keeps its compact, label-less chart.
   - Family order is tuned for a full, balanced fan: Cloud, Infra as Code, Containers, Quality, CI/CD (Jenkins → GitHub Actions), Soft skills, Scripting (Python → Git), with short labels at both ends.
   - Long labels on the diagonals shrink the chart. Keep Spanish labels about as long as the English ones; for example, "Diagnóstico deductivo" and "Transversales" were chosen for this.
   - There is no list view or list toggle; the user removed it.
@@ -39,7 +40,7 @@ Designed and directed by **Franco Gonzalez Farabollini** (the user, a designer).
 - **Section chips** (`components/board/SectionChips.tsx`): Experience, Projects, Certifications, Education, Languages. They're pinned under the chart and mark the current section.
 - **Gallery:** justified rows, images only (no captions), a dark lightbox, and a "More on Instagram @gonzalezfarabollini ↗" link (from `profile.instagram` in Sanity).
 - **Footer:** only "Designed by Franco Gonzalez Farabollini ↗" linking to https://www.linkedin.com/in/franco-gonzalez-farabollini-568455148/ (hardcoded in `components/Footer.tsx`).
-- **Ideas the user tried and rejected (don't reintroduce unless asked):** the chart shrinking while you scroll; the 25/50/75/100 scale and level words (exploring…expert); "fig.01" titles; the hint text under the portrait; a contact section in the footer.
+- **Ideas the user tried and rejected (don't reintroduce unless asked):** the chart shrinking while you scroll; the 25/50/75/100 scale and level words (exploring…expert); "fig.01" titles; the hint text under the portrait; a contact section in the footer; the stats line under the role (projects, certifications, skills mapped); the "further out · more hands-on" key on the chart.
 
 ## Code map
 - `app/(en)/page.tsx`, `app/(es)/es/page.tsx`: separate root layouts per language (`<html lang>`). Both render `components/SitePage.tsx`.

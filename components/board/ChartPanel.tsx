@@ -105,16 +105,6 @@ export default function ChartPanel({
             );
           }}
         />
-
-        {/* The only key the chart needs: what distance means. Deliberately no scale. */}
-        <p
-          aria-hidden
-          className="pointer-events-none absolute right-3 bottom-2 font-mono text-[10px] tracking-wide text-ink-3 uppercase transition-opacity duration-300"
-          style={{ opacity: revealed ? 0 : 1 }}
-        >
-          {t.chart.key}
-        </p>
-
       </div>
     </div>
   );

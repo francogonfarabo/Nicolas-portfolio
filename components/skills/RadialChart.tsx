@@ -9,10 +9,9 @@ import {
   type Slot,
   type Vec,
   clampToChart,
-  hubValue,
   makeFrame,
   polar,
-  radiusFor,
+  restPosition,
   slotsFor,
 } from "./geometry";
 import { useI18n } from "../I18n";
@@ -45,14 +44,14 @@ const LINE = "#e5e5e5";
 const LINE_2 = "#d4d4d4";
 
 /** The shortest the chart is laid out at; any shorter and it's scaled down whole. */
-const MIN_LAYOUT = 340;
+const MIN_LAYOUT = 380;
 
 const hash = (s: string) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
 
 /**
- * Nico's skills as a radial tree. Further out = more hands-on experience: an estimate,
- * so there's deliberately no scale or number anywhere. Nodes can be grabbed and pulled
- * around for fun, and always spring back to their place on release.
+ * Nico's skills as a radial tree: what he has worked with, not how much, so every skill is
+ * the same distance from the centre and there's no scale or number anywhere. Nodes can be
+ * grabbed and pulled around for fun, and always spring back to their place on release.
  */
 export default function RadialChart({
   categories,
@@ -98,12 +97,6 @@ export default function RadialChart({
     return m;
   }, [slots]);
 
-  /** The fixed values, straight from the content. */
-  const values = useMemo(
-    () => Object.fromEntries(categories.flatMap((c) => c.skills.map((s) => [s.key, s.value]))) as Record<string, number>,
-    [categories],
-  );
-
   const drag = useRef<Drag | null>(null);
   const bodies = useRef(new Map<string, Body>());
   const raf = useRef<number | null>(null);
@@ -143,34 +136,26 @@ export default function RadialChart({
     return () => io.disconnect();
   }, [reduce]);
 
-  // --- where everything belongs -------------------------------------------
-  const restPos = useCallback(
-    (f: Frame, s: Slot): Vec =>
-      s.kind === "hub"
-        ? polar(f, s.angle, radiusFor(f, hubValue((children.get(s.id) ?? []).map((c) => values[c.id] ?? 0))))
-        : polar(f, s.angle, radiusFor(f, values[s.id] ?? 0)),
-    [children, values],
-  );
-
+  // --- where everything belongs (restPosition: one circle for skills, one for hubs) ---
   const targetFor = useCallback(
     (f: Frame, s: Slot): Vec => {
       const d = drag.current;
       if (!bloomed) return { x: f.cx, y: f.cy };
       if (d && d.id === s.id) return d.pos;
-      const rest = restPos(f, s);
+      const rest = restPosition(f, s);
       if (d && d.kind === "hub" && s.hub === d.id) {
         // A pulled hub drags its family along, elastically.
-        const hubRest = restPos(f, slotById.get(d.id)!);
+        const hubRest = restPosition(f, slotById.get(d.id)!);
         return { x: rest.x + (d.pos.x - hubRest.x) * 0.85, y: rest.y + (d.pos.y - hubRest.y) * 0.85 };
       }
       if (d && d.kind === "leaf" && s.kind === "hub" && slotById.get(d.id)?.hub === s.id) {
         // …and a pulled skill tugs its hub a little.
-        const leafRest = restPos(f, slotById.get(d.id)!);
+        const leafRest = restPosition(f, slotById.get(d.id)!);
         return { x: rest.x + (d.pos.x - leafRest.x) * 0.15, y: rest.y + (d.pos.y - leafRest.y) * 0.15 };
       }
       return rest;
     },
-    [bloomed, restPos, slotById],
+    [bloomed, slotById],
   );
 
   // --- physics loop -----------------------------------------------------

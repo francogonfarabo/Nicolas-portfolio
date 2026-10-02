@@ -36,7 +36,7 @@ const en = {
     title: "Skills",
     families: "Skill families",
     description:
-      "Skills grouped by family. The further from the centre, the more hands-on experience. Use the arrow keys to move between skills; each one says how many projects used it.",
+      "Skills grouped by family. Use the arrow keys to move between skills; each one says how many projects used it.",
     touch: "touch a node",
     family: (label: string, n: number) => `${label}: ${n} skills`,
     skill: (label: string, n: number) => (n ? `${label}, used in ${n} project${n === 1 ? "" : "s"}` : label),
@@ -102,7 +102,7 @@ const es: Dict = {
     title: "Habilidades",
     families: "Familias de habilidades",
     description:
-      "Habilidades agrupadas por familia. Cuanto más lejos del centro, más experiencia práctica. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó.",
+      "Habilidades agrupadas por familia. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó.",
     touch: "toca un nodo",
     family: (label: string, n: number) => `${label}: ${n} habilidades`,
     skill: (label: string, n: number) => (n ? `${label}, usada en ${n} proyecto${n === 1 ? "" : "s"}` : label),

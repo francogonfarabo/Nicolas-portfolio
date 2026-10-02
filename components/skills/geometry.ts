@@ -7,9 +7,12 @@ export type Frame = {
   height: number;
   cx: number;
   cy: number;
-  /** Radius for value 0 and value 100. */
+  /** The portrait's orbit (inner guide, and the closest a dragged node can get). */
   r0: number;
+  /** R_leaf: every skill sits on this circle (the outer guide). */
   r1: number;
+  /** R_hub: every family hub sits on this circle. */
+  rHub: number;
   compact: boolean;
   fontSize: number;
   /** Diameter of the portrait at the root. */
@@ -31,19 +34,38 @@ export type Slot = {
 export const HUB_PREFIX = "hub:";
 export const CHAR_W = 0.55; // average glyph width relative to font size (Geist)
 
-export function slotsFor(categories: SkillCategory[]): Slot[] {
-  const margin = 0.09;
-  const gap = 1.1;
+/*
+ * The layout is deliberately neutral: it shows which skills Nico has touched, not how much.
+ * Every skill sits on one circle (R_leaf) and every family hub on another (R_hub), whatever
+ * the content says. R_leaf is fitted to the box (makeFrame); everything else follows from it.
+ */
+/** Empty angle left at each end of the half-circle, in radians. */
+export const ARC_MARGIN = 0.09;
+/** Angle between two families, in leaf steps (1 would be no gap). The same between every pair. */
+export const CATEGORY_GAP = 1.6;
+/** R_hub as a fraction of R_leaf. */
+export const HUB_RATIO = 0.7;
+
+/**
+ * The angle between neighbouring skills: the half-circle (minus the margins and the
+ * family gaps) shared out evenly, so adding or removing a skill re-spaces everything.
+ */
+export function leafStep(categories: SkillCategory[]): number {
   const filled = categories.filter((c) => c.skills.length);
   const leafCount = filled.reduce((n, c) => n + c.skills.length, 0);
-  // Steps inside each family, plus one wider gap between families: spans the full half-circle.
-  const units = Math.max(1, leafCount - filled.length + gap * (filled.length - 1));
-  const step = (Math.PI - margin * 2) / units;
+  const units = Math.max(1, leafCount - filled.length + CATEGORY_GAP * (filled.length - 1));
+  return (Math.PI - ARC_MARGIN * 2) / units;
+}
+
+/** Every node's resting angle, straight from the data: skills in content order, hubs at their skills' mean angle. */
+export function slotsFor(categories: SkillCategory[]): Slot[] {
+  const filled = categories.filter((c) => c.skills.length);
+  const step = leafStep(categories);
 
   const slots: Slot[] = [];
-  let a = Math.PI - margin;
+  let a = Math.PI - ARC_MARGIN;
   filled.forEach((cat, ci) => {
-    if (ci > 0) a -= step * gap;
+    if (ci > 0) a -= step * CATEGORY_GAP;
     const leafSlots: Slot[] = cat.skills.map((s, i) => ({
       id: s.key,
       kind: "leaf",
@@ -66,32 +88,27 @@ const R0_RATIO = 0.2;
 const BOTTOM = 64;
 
 /**
- * Size the half-disc so every label (at its ORIGINAL value) fits the box.
- * Layout never depends on live values, so the chart doesn't rescale mid-drag.
+ * Size the half-disc so every label fits the box: R_leaf (r1) is the largest radius at which
+ * each skill's label, running outward from the outer circle, stays inside.
  * Each constraint is linear in r1, so each leaf gives a closed-form upper bound.
  */
 export function makeFrame(width: number, maxHeight: number | undefined, categories: SkillCategory[]): Frame {
   const fontSize = width < 700 ? 11.5 : 12;
   const half = width / 2 - 6;
-  const byKey = new Map(categories.flatMap((c) => c.skills.map((s) => [s.key, s] as const)));
   const leaves = slotsFor(categories)
     .filter((s) => s.kind === "leaf")
-    .map((s) => {
-      const k = byKey.get(s.id)!;
-      return { angle: s.angle, v: k.value / 100, reach: k.label.length * fontSize * CHAR_W + 10 + 24 };
-    });
-  const k = (v: number) => R0_RATIO + (1 - R0_RATIO) * v; // radius(v) / r1
+    .map((s) => ({ angle: s.angle, reach: s.label.length * fontSize * CHAR_W + 10 + 24 }));
 
   let r1 = Math.min(440, half - 4);
   for (const l of leaves) {
     const c = Math.abs(Math.cos(l.angle));
-    if (c > 0.05) r1 = Math.min(r1, (half - c * l.reach) / (c * k(l.v)));
+    if (c > 0.05) r1 = Math.min(r1, (half - c * l.reach) / c);
   }
   if (maxHeight) {
     r1 = Math.min(r1, maxHeight - BOTTOM - 16);
     for (const l of leaves) {
       const s = Math.sin(l.angle);
-      if (s > 0.05) r1 = Math.min(r1, (maxHeight - BOTTOM - 8 - s * l.reach) / (s * k(l.v)));
+      if (s > 0.05) r1 = Math.min(r1, (maxHeight - BOTTOM - 8 - s * l.reach) / s);
     }
   }
 
@@ -101,10 +118,7 @@ export function makeFrame(width: number, maxHeight: number | undefined, categori
 
   let top = 22;
   if (!compact) {
-    for (const l of leaves) {
-      const r = r0 + l.v * (r1 - r0);
-      top = Math.max(top, Math.sin(l.angle) * (r + l.reach) - r1 + 8);
-    }
+    for (const l of leaves) top = Math.max(top, Math.sin(l.angle) * (r1 + l.reach) - r1 + 8);
   }
   const height = top + r1 + BOTTOM;
   return {
@@ -114,13 +128,12 @@ export function makeFrame(width: number, maxHeight: number | undefined, categori
     cy: top + r1,
     r0,
     r1,
+    rHub: r1 * HUB_RATIO,
     compact,
     fontSize,
     root: compact ? 64 : Math.round(Math.min(104, Math.max(72, r0 * 1.35))),
   };
 }
-
-export const radiusFor = (f: Frame, value: number) => f.r0 + (Math.max(0, Math.min(100, value)) / 100) * (f.r1 - f.r0);
 
 export const polar = (f: Frame, angle: number, radius: number): Vec => ({
   x: f.cx + Math.cos(angle) * radius,
@@ -137,5 +150,5 @@ export function clampToChart(f: Frame, p: Vec): { angle: number; radius: number 
   return { angle, radius };
 }
 
-/** Hubs sit halfway between the centre and the average of their skills. */
-export const hubValue = (childValues: number[]) => childValues.reduce((a, b) => a + b, 0) / Math.max(1, childValues.length) / 2;
+/** Where a node rests: its angle from slotsFor, on the hub circle or the skill circle. */
+export const restPosition = (f: Frame, s: Slot): Vec => polar(f, s.angle, s.kind === "hub" ? f.rHub : f.r1);

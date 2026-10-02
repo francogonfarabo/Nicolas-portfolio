@@ -13,6 +13,8 @@ export type Frame = {
   r1: number;
   /** R_hub: every family hub sits on this circle. */
   rHub: number;
+  /** Which way the half-disc opens: 0 = up (the fan rises from the portrait), -π/2 = sideways (opens to the right). */
+  turn: number;
   compact: boolean;
   fontSize: number;
   /** Diameter of the portrait at the root. */
@@ -45,6 +47,8 @@ export const ARC_MARGIN = 0.09;
 export const CATEGORY_GAP = 1.6;
 /** R_hub as a fraction of R_leaf. */
 export const HUB_RATIO = 0.7;
+/** Phones: label size of the sideways chart. */
+export const SIDEWAYS_FONT = 11;
 
 /**
  * The angle between neighbouring skills: the half-circle (minus the margins and the
@@ -129,22 +133,49 @@ export function makeFrame(width: number, maxHeight: number | undefined, categori
     r0,
     r1,
     rHub: r1 * HUB_RATIO,
+    turn: 0,
     compact,
     fontSize,
     root: compact ? 64 : Math.round(Math.min(104, Math.max(72, r0 * 1.35))),
   };
 }
 
+/**
+ * Phones: the same tree turned a quarter, so it opens to the right of the portrait and the
+ * labels run across the screen instead of up it. Sized by width alone (it isn't pinned on
+ * phones), so every label shows: R_leaf is the largest radius at which each label fits.
+ */
+export function makeSidewaysFrame(width: number, categories: SkillCategory[]): Frame {
+  const fontSize = SIDEWAYS_FONT;
+  const r0 = 60;
+  const root = Math.round(Math.min(104, Math.max(72, r0 * 1.35)));
+  const cx = root / 2 + 6;
+  const leaves = slotsFor(categories)
+    .filter((s) => s.kind === "leaf")
+    .map((s) => ({ t: s.angle - Math.PI / 2, reach: s.label.length * fontSize * CHAR_W + 10 + 24 }));
+
+  let r1 = 440;
+  for (const l of leaves) {
+    const c = Math.cos(l.t);
+    if (c > 0.05) r1 = Math.min(r1, (width - 6 - cx - c * l.reach) / c);
+  }
+  // Room above and below the portrait: the outer guide, or the furthest label, whichever reaches further.
+  const up = Math.max(r1 + 10, ...leaves.map((l) => Math.sin(l.t) * (r1 + l.reach))) + 8;
+  const down = Math.max(r1 + 10, ...leaves.map((l) => -Math.sin(l.t) * (r1 + l.reach))) + 8;
+  return { width, height: up + down, cx, cy: up, r0, r1, rHub: r1 * HUB_RATIO, turn: -Math.PI / 2, compact: false, fontSize, root };
+}
+
 export const polar = (f: Frame, angle: number, radius: number): Vec => ({
-  x: f.cx + Math.cos(angle) * radius,
-  y: f.cy - Math.sin(angle) * radius,
+  x: f.cx + Math.cos(angle + f.turn) * radius,
+  y: f.cy - Math.sin(angle + f.turn) * radius,
 });
 
 /** Clamp a free pointer position into the half-disc between r0 and r1. */
 export function clampToChart(f: Frame, p: Vec): { angle: number; radius: number } {
   const dx = p.x - f.cx;
   const dy = f.cy - p.y;
-  let angle = Math.atan2(dy, dx);
+  let angle = Math.atan2(dy, dx) - f.turn;
+  if (angle > Math.PI) angle -= 2 * Math.PI;
   if (angle < 0) angle = angle < -Math.PI / 2 ? Math.PI : 0;
   const radius = Math.max(f.r0, Math.min(f.r1, Math.hypot(dx, dy)));
   return { angle, radius };

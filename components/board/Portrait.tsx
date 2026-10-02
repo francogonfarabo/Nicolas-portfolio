@@ -21,15 +21,12 @@ export default function Portrait({
   profile,
   size,
   revealed,
-  growRight = false,
   onHover,
   onToggle,
 }: {
   profile: Profile;
   size: number;
   revealed: boolean;
-  /** Grow rightward from the left edge (the sideways chart on phones) instead of upward. */
-  growRight?: boolean;
   onHover: (on: boolean) => void;
   onToggle: () => void;
 }) {
@@ -60,8 +57,6 @@ export default function Portrait({
     cy.set(fy * size);
   };
 
-  // How far the grown portrait moves so one edge stays put.
-  const shift = revealed ? ((SCALE - 1) * (size + 6)) / 2 : 0;
   const pos = (f?: { x: number; y: number }) => (f ? `${f.x * 100}% ${f.y * 100}%` : "50% 50%");
 
   return (
@@ -94,8 +89,7 @@ export default function Portrait({
       className="absolute block -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full bg-white p-[3px] ring-1 ring-line-2 disabled:cursor-default"
       style={{ width: size + 6, height: size + 6 }}
       // Grow upward: the bottom edge stays put, so nothing below the chart gets covered.
-      // Sideways (phones) the left edge stays put instead, so it doesn't leave the box.
-      animate={{ scale: revealed ? SCALE : 1, x: growRight ? shift : 0, y: growRight ? 0 : -shift }}
+      animate={{ scale: revealed ? SCALE : 1, y: revealed ? -((SCALE - 1) * (size + 6)) / 2 : 0 }}
       transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 170, damping: 22 }}
     >
       <span className="relative block size-full overflow-hidden rounded-full bg-surface">

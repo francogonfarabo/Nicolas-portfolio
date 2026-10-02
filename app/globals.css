@@ -30,11 +30,8 @@
 :root {
   color-scheme: light;
   --header-h: 48px;
-  --pin-top: var(--header-h);
-  /* Phones: the sideways chart is sized by width (~1.73× as tall as it is wide); this only
-     reserves its room before it measures itself, so the page doesn't jump on load. */
-  --chart-area: calc((100vw - 58px) * 1.73);
-  --panel-h: 52px; /* only the section chips stay pinned on phones */
+  --chart-area: clamp(240px, 36svh, 290px);
+  --panel-h: calc(var(--chart-area) + 64px);
 }
 @media (min-width: 640px) {
   :root {

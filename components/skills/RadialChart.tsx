@@ -10,13 +10,11 @@ import {
   type Vec,
   clampToChart,
   makeFrame,
-  makeSidewaysFrame,
   polar,
   restPosition,
   slotsFor,
 } from "./geometry";
 import { useI18n } from "../I18n";
-import { usePhone } from "@/lib/media";
 
 type Props = {
   categories: SkillCategory[];
@@ -83,17 +81,14 @@ export default function RadialChart({
 
   // Short screens: the layout tightens down to MIN_LAYOUT; below that the whole chart is
   // scaled down as one piece, so the labels shrink a little instead of disappearing.
-  // Phones: the chart turns sideways and isn't pinned, so it's sized by width alone and keeps every label.
-  const phone = usePhone();
   const { frame, scale } = useMemo<{ frame: Frame | null; scale: number }>(() => {
     if (!box.w) return { frame: null, scale: 1 };
-    if (phone) return { frame: makeSidewaysFrame(box.w, categories), scale: 1 };
     const cap = fitHeight && box.h ? box.h : undefined;
     if (!cap || cap >= MIN_LAYOUT) return { frame: makeFrame(box.w, cap, categories), scale: 1 };
     const f = makeFrame(box.w, MIN_LAYOUT, categories);
     if (f.compact) return { frame: makeFrame(box.w, cap, categories), scale: 1 };
     return { frame: f, scale: Math.min(1, cap / f.height) };
-  }, [box.w, box.h, fitHeight, categories, phone]);
+  }, [box.w, box.h, fitHeight, categories]);
   const slots = useMemo(() => slotsFor(categories), [categories]);
   const slotById = useMemo(() => new Map(slots.map((s) => [s.id, s])), [slots]);
   const children = useMemo(() => {
@@ -521,18 +516,12 @@ export default function RadialChart({
 
 /** Just the frame of the half-disc: the portrait's orbit, the outer edge and the horizon. No scale. */
 function Guides({ frame: f }: { frame: Frame }) {
-  const arc = (r: number) => {
-    const a = polar(f, Math.PI, r);
-    const b = polar(f, 0, r);
-    return `M${a.x},${a.y} A${r},${r} 0 0 1 ${b.x},${b.y}`;
-  };
-  const a = polar(f, Math.PI, f.r1 + 10);
-  const b = polar(f, 0, f.r1 + 10);
+  const arc = (r: number) => `M${f.cx - r},${f.cy} A${r},${r} 0 0 1 ${f.cx + r},${f.cy}`;
   return (
     <g aria-hidden fill="none">
       <path d={arc(f.r0)} stroke={LINE} />
       <path d={arc(f.r1)} stroke={LINE_2} />
-      <line x1={a.x} x2={b.x} y1={a.y} y2={b.y} stroke={LINE_2} />
+      <line x1={f.cx - f.r1 - 10} x2={f.cx + f.r1 + 10} y1={f.cy} y2={f.cy} stroke={LINE_2} />
     </g>
   );
 }

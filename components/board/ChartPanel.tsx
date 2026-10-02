@@ -78,14 +78,13 @@ export default function ChartPanel({
               profile={profile}
               size={f.root}
               revealed={revealed}
-              growRight={f.turn !== 0}
               onHover={onPortraitHover}
               onToggle={onPortraitToggle}
             />
           )}
           renderOverlay={(f) => {
-            // Above the grown portrait (it grows upward from its bottom edge; sideways, from its left edge).
-            const above = f.turn ? f.height - f.cy + (f.root * SCALE) / 2 : f.height - f.cy + f.root / 2 + f.root * (SCALE - 1);
+            // Above the grown portrait (it grows upward from its bottom edge).
+            const above = f.height - f.cy + f.root / 2 + f.root * (SCALE - 1);
             // Short chart: smaller quote, on white, since it may rise over the legend.
             const tight = f.compact || f.height - above < 150;
             return (
@@ -94,8 +93,7 @@ export default function ChartPanel({
                   <div
                     className="pointer-events-none absolute -translate-x-1/2"
                     style={{
-                      // Sideways (phones) the portrait sits at the left edge, so centre the quote on the chart.
-                      left: f.turn ? f.width / 2 : f.cx,
+                      left: f.cx,
                       bottom: above + (tight ? 10 : 18),
                       width: tight ? f.width + 20 : Math.min(560, f.width - 16),
                     }}

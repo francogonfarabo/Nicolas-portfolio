@@ -6,7 +6,6 @@ import ChartPanel from "./ChartPanel";
 import SectionChips, { type SectionChip } from "./SectionChips";
 import WorkPanel from "./WorkPanel";
 import { useI18n } from "../I18n";
-import { PHONE_QUERY } from "@/lib/media";
 
 export type SkillMeta = { label: string; color: string; family: string };
 
@@ -78,8 +77,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
           </p>
         </div>
 
-        {/* Skills map: pinned under the header (phones: only the section chips stay pinned) */}
-        <div id="pin-block" className="sticky top-(--pin-top) z-30 -mx-4 bg-white px-4 pt-2 pb-1 sm:-mx-6 sm:px-6">
+        {/* Skills map: pinned under the header */}
+        <div id="pin-block" className="sticky top-(--header-h) z-30 -mx-4 bg-white px-4 pt-2 pb-1 sm:-mx-6 sm:px-6">
           <ChartPanel
             skills={skills}
             usage={usage}
@@ -109,10 +108,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
 }
 
 /**
- * Keeps --stuck-offset (the pinned block's visible height, used as the sections' scroll margin)
- * and --pin-top up to date, and reports which section sits under the pinned block.
- * On phones the chart is too tall to pin, so the block sticks with a negative offset that
- * lets the chart scroll away and keeps just the section chips under the header.
+ * Keeps --stuck-offset (the pinned block's height, used as the sections' scroll margin)
+ * up to date, and reports which section sits under the pinned block.
  */
 function useActiveSection(sections: SectionChip[]) {
   const [active, setActive] = useState<string[]>([]);
@@ -124,18 +121,11 @@ function useActiveSection(sections: SectionChip[]) {
     const root = document.documentElement;
     let raf = 0;
     let offset = -1;
-    let pinTop = NaN;
 
     const update = () => {
       raf = 0;
       const headerH = parseFloat(getComputedStyle(root).getPropertyValue("--header-h")) || 48;
-      const chips = block.querySelector("nav");
-      const hidden = chips && window.matchMedia(PHONE_QUERY).matches ? chips.offsetTop : 0;
-      if (headerH - hidden !== pinTop) {
-        pinTop = headerH - hidden;
-        root.style.setProperty("--pin-top", `${pinTop}px`);
-      }
-      const stuck = block.offsetHeight - hidden + 8;
+      const stuck = block.offsetHeight + 8;
       if (stuck !== offset) {
         offset = stuck;
         root.style.setProperty("--stuck-offset", `${stuck}px`);

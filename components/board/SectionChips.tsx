@@ -9,6 +9,22 @@ export type SectionChip = { id: string; label: string };
  * Jump links to each part of the work history, pinned under the skills map.
  * The section currently under the map is marked (two when they sit side by side).
  */
+/**
+ * Scrolls a section to just under the pinned block. Done by hand rather than by the anchor:
+ * on laptops the chart shrinks while the page scrolls, which moves the section up mid-scroll,
+ * so the target is where the section will be once the block is pinned (same 16px gap as the
+ * scroll margins give).
+ */
+function goTo(e: React.MouseEvent, id: string) {
+  const block = document.getElementById("pin-block");
+  const el = document.getElementById(id);
+  if (!block || !el) return;
+  e.preventDefault();
+  const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 48;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - block.offsetHeight - headerH - 16 });
+  history.replaceState(null, "", `#${id}`);
+}
+
 export default function SectionChips({ sections, active }: { sections: SectionChip[]; active: string[] }) {
   const { t } = useI18n();
   const row = useRef<HTMLElement>(null);
@@ -38,6 +54,7 @@ export default function SectionChips({ sections, active }: { sections: SectionCh
             key={s.id}
             href={`#${s.id}`}
             data-chip={s.id}
+            onClick={(e) => goTo(e, s.id)}
             aria-current={on ? "location" : undefined}
             className={`shrink-0 border px-2 py-1 font-mono text-[10.5px] tracking-wide uppercase transition-colors ${
               on ? "border-ink bg-ink text-white" : "border-line text-ink-2 hover:border-ink hover:text-ink"

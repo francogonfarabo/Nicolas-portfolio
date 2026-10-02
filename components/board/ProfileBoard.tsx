@@ -6,6 +6,7 @@ import ChartPanel from "./ChartPanel";
 import SectionChips, { type SectionChip } from "./SectionChips";
 import WorkPanel from "./WorkPanel";
 import { useI18n } from "../I18n";
+import { PHONE_QUERY } from "@/lib/media";
 
 export type SkillMeta = { label: string; color: string; family: string };
 
@@ -64,7 +65,9 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   }, [work]);
 
   return (
-    <section id="top" aria-label={t.profile.section} className="border-b border-line">
+    // No scroll anchoring here: the chart shrinking above the fold would make the browser shift
+    // the page to compensate, fighting the scroll that drives it (and the section chips' targets).
+    <section id="top" aria-label={t.profile.section} className="border-b border-line [overflow-anchor:none]">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         {/* Identity (scrolls away) */}
         <div className="pt-8 pb-7 sm:pt-12">
@@ -108,8 +111,12 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
 }
 
 /**
- * Keeps --stuck-offset (the pinned block's height, used as the sections' scroll margin)
- * up to date, and reports which section sits under the pinned block.
+ * Sizes the chart while scrolling and keeps --stuck-offset (the pinned block's height once
+ * stuck, used as the sections' scroll margin) up to date; reports which section sits under it.
+ *
+ * Laptop/tablet: at the top the chart takes all the room the screen has under the name; as the
+ * block rises to the header it shrinks to its pinned size (--chart-area), tracking the scroll.
+ * Phones keep the fixed compact size.
  */
 function useActiveSection(sections: SectionChip[]) {
   const [active, setActive] = useState<string[]>([]);
@@ -121,11 +128,35 @@ function useActiveSection(sections: SectionChip[]) {
     const root = document.documentElement;
     let raf = 0;
     let offset = -1;
+    let lastCap = "";
+    // Measures --chart-area (the pinned cap) in px.
+    const pinProbe = document.createElement("div");
+    pinProbe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;width:0;height:var(--chart-area)";
+    document.body.appendChild(pinProbe);
 
     const update = () => {
       raf = 0;
       const headerH = parseFloat(getComputedStyle(root).getPropertyValue("--header-h")) || 48;
-      const stuck = block.offsetHeight + 8;
+      const chart = block.querySelector<HTMLElement>("[data-chart]");
+      const pinCap = pinProbe.offsetHeight;
+      let pinnedH = block.offsetHeight;
+      if (chart && !window.matchMedia(PHONE_QUERY).matches) {
+        const chrome = block.offsetHeight - chart.offsetHeight; // title bar, chips, padding
+        const restTop = (block.previousElementSibling?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
+        const startCap = Math.max(pinCap, Math.min(520, window.innerHeight - restTop - chrome - 16));
+        const t = Math.min(1, Math.max(0, window.scrollY / Math.max(1, restTop - headerH)));
+        const cap = `${Math.round(startCap + (pinCap - startCap) * t)}px`;
+        if (cap !== lastCap) {
+          lastCap = cap;
+          block.style.setProperty("--chart-cap", cap);
+        }
+        // The chart never gets taller than the cap, so once pinned it's min(pinned cap, its own height).
+        pinnedH = chrome + Math.min(pinCap, chart.offsetHeight);
+      } else if (lastCap) {
+        lastCap = "";
+        block.style.removeProperty("--chart-cap");
+      }
+      const stuck = pinnedH + 8;
       if (stuck !== offset) {
         offset = stuck;
         root.style.setProperty("--stuck-offset", `${stuck}px`);
@@ -156,6 +187,7 @@ function useActiveSection(sections: SectionChip[]) {
     const ro = new ResizeObserver(schedule);
     ro.observe(block);
     return () => {
+      pinProbe.remove();
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);

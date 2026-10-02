@@ -31,6 +31,19 @@ function keepInPlace(el: HTMLElement) {
   requestAnimationFrame(step);
 }
 
+/**
+ * After collapsing a card from its details, scroll its header back into view if it's gone under
+ * the pinned block. Waits for the collapse to finish: a smooth scroll started while the page
+ * height is still changing gets cancelled.
+ */
+function bringBack(head: HTMLElement) {
+  window.setTimeout(() => {
+    const pinned = document.getElementById("pin-block")?.getBoundingClientRect().bottom ?? 0;
+    const top = head.getBoundingClientRect().top;
+    if (top < pinned + 8) window.scrollBy({ top: top - pinned - 16 });
+  }, 320);
+}
+
 export default function WorkPanel({
   work,
   skillIndex,
@@ -291,13 +304,22 @@ function ProjectRow({
           <motion.div
             id={panelId}
             key="panel"
+            // The details collapse the card too (the header button stays the keyboard control).
+            // Links, skill tags and text being selected don't count.
+            onClick={(e) => {
+              if ((e.target as Element).closest("a, button") || window.getSelection()?.toString()) return;
+              const head = e.currentTarget.closest("li")?.querySelector<HTMLElement>("h3 button");
+              if (!head) return;
+              onToggle(head);
+              bringBack(head);
+            }}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={reduce ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="pb-4 sm:ml-[calc(8.5rem+1.5rem)]">
+            <div className="cursor-pointer pb-4 sm:ml-[calc(8.5rem+1.5rem)]">
               <ul className="space-y-1.5 text-[13.5px] leading-relaxed text-ink-2">
                 {p.bullets.map((b) => (
                   <li key={b} className="relative pl-4">

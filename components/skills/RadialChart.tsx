@@ -25,7 +25,7 @@ type Props = {
   /** Reports the leaf under the pointer / being dragged / focused. */
   onActive?: (key: string | null) => void;
   pulse: { id: string; key: number } | null;
-  /** Never taller than --chart-area (the box then hugs the chart, so there's no empty band). */
+  /** Never taller than the cap (--chart-cap, set while scrolling, else --chart-start); the box then hugs the chart, so there's no empty band. */
   fitHeight: boolean;
   /** Fade the chart (the portrait easter egg is showing). */
   dimmed: boolean;
@@ -102,7 +102,7 @@ export default function RadialChart({
   const raf = useRef<number | null>(null);
 
   // --- measure ---------------------------------------------------------
-  // Width from the wrapper; the height cap from an invisible probe sized to --chart-area,
+  // Width from the wrapper; the height cap from an invisible probe sized to the cap,
   // so the wrapper can take the chart's own height without feeding back into the layout.
   useLayoutEffect(() => {
     const el = wrapRef.current;
@@ -334,11 +334,15 @@ export default function RadialChart({
   return (
     <div
       ref={wrapRef}
-      className="relative w-full select-none"
+      data-chart
+      // flow-root keeps the scaled chart's negative margin inside, so the box ends where the chart does.
+      className="relative flow-root w-full select-none"
       // Before the first measure (server render), reserve the cap so nothing jumps much.
-      style={!frame && fitHeight ? { height: "var(--chart-area)" } : undefined}
+      style={!frame && fitHeight ? { height: "min(var(--chart-cap, var(--chart-start)), var(--chart-guess))" } : undefined}
     >
-      {fitHeight && <div ref={capRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 h-(--chart-area) w-px" />}
+      {fitHeight && (
+        <div ref={capRef} aria-hidden className="pointer-events-none invisible absolute top-0 left-0 h-[var(--chart-cap,var(--chart-start))] w-px" />
+      )}
       {frame && (
         <div
           className="relative mx-auto origin-top"

@@ -26,16 +26,24 @@
 /* The pinned skills map: the most the chart may take (it shrinks to fit when width is the limit),
    and a fallback height for the whole pinned block (ProfileBoard measures the real one).
    From sm up it follows the screen height: header + pinned block stay around 56% of the screen,
-   leaving the rest for reading (~140px is the header, title bar and chips). */
+   leaving the rest for reading (~140px is the header, title bar and chips).
+   --chart-start is the cap before any scrolling: from sm up the chart starts as big as fits
+   on screen under the name (~330px is the header, name, title bar and chips) and shrinks to
+   --chart-area as the block reaches the header (ProfileBoard sets the live cap, --chart-cap). */
 :root {
   color-scheme: light;
   --header-h: 48px;
   --chart-area: clamp(240px, 36svh, 290px);
+  --chart-start: var(--chart-area);
+  /* Roughly the chart's own height for this width, reserved before it measures itself. */
+  --chart-guess: calc(100vw * 0.62);
   --panel-h: calc(var(--chart-area) + 64px);
 }
 @media (min-width: 640px) {
   :root {
     --chart-area: clamp(260px, calc(56svh - 140px), 500px);
+    --chart-start: max(var(--chart-area), min(520px, calc(100svh - 330px)));
+    --chart-guess: calc(min(100vw, 768px) * 0.54);
     --panel-h: calc(var(--chart-area) + 50px);
   }
 }

@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Project, Work } from "@/content/types";
 import type { SkillMeta } from "./ProfileBoard";
 import { useI18n } from "../I18n";
+import { usePhone } from "@/lib/media";
 
 function Period({ start, end, current }: { start: string; end?: string; current: boolean }) {
   const { t } = useI18n();
@@ -13,6 +14,21 @@ function Period({ start, end, current }: { start: string; end?: string; current:
       {start} — {current ? <span className="text-ink">{t.work.present}</span> : end}
     </>
   );
+}
+
+/**
+ * Holds a row still on screen while the project above it collapses (phones open one at a time),
+ * so the tapped project doesn't jump away from under the finger.
+ */
+function keepInPlace(el: HTMLElement) {
+  const top = el.getBoundingClientRect().top;
+  const until = performance.now() + 500;
+  const step = () => {
+    const drift = el.getBoundingClientRect().top - top;
+    if (Math.abs(drift) > 0.5) window.scrollBy({ top: drift, behavior: "instant" });
+    if (performance.now() < until) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 export default function WorkPanel({
@@ -29,15 +45,26 @@ export default function WorkPanel({
   onSkillTag: (key: string) => void;
 }) {
   const { t } = useI18n();
+  const phone = usePhone();
   const firstRich = work.projects.findIndex((p) => p.bullets.length > 2);
   const [open, setOpen] = useState<Set<number>>(() => new Set(firstRich >= 0 ? [firstRich] : []));
-  const toggle = (i: number) =>
+  const toggle = (i: number, row: HTMLElement) => {
+    // Phones (no hover): one project open at a time, and the open one lights up its skills
+    // in the pinned chart until it's closed.
+    if (phone) {
+      const opening = !open.has(i);
+      setOpen(opening ? new Set([i]) : new Set());
+      onProjectHover(opening ? work.projects[i].skills : null);
+      if (opening) keepInPlace(row);
+      return;
+    }
     setOpen((prev) => {
       const next = new Set(prev);
       if (next.has(i)) next.delete(i);
       else next.add(i);
       return next;
     });
+  };
 
   const earliest = work.roles.at(-1)?.start;
   const usedIn = activeSkill ? work.projects.filter((p) => p.skills.includes(activeSkill)).length : 0;
@@ -90,16 +117,16 @@ export default function WorkPanel({
         id="projects-title"
         anchor="projects"
       >
-        <ul className="border-t border-line" onPointerLeave={() => onProjectHover(null)}>
+        <ul className="border-t border-line" onPointerLeave={() => !phone && onProjectHover(null)}>
           {work.projects.map((p, i) => (
             <ProjectRow
               key={p.name}
               project={p}
               open={open.has(i)}
-              onToggle={() => toggle(i)}
+              onToggle={(row) => toggle(i, row)}
               skillIndex={skillIndex}
               match={activeSkill ? p.skills.includes(activeSkill) : null}
-              onHover={onProjectHover}
+              onHover={phone ? undefined : onProjectHover}
               onSkillTag={onSkillTag}
             />
           ))}
@@ -202,10 +229,11 @@ function ProjectRow({
 }: {
   project: Project;
   open: boolean;
-  onToggle: () => void;
+  onToggle: (row: HTMLElement) => void;
   skillIndex: Map<string, SkillMeta>;
   match: boolean | null;
-  onHover: (skills: string[] | null) => void;
+  /** Hover/focus → chart highlight (not on phones, where the open project drives it). */
+  onHover?: (skills: string[] | null) => void;
   onSkillTag: (key: string) => void;
 }) {
   const reduce = useReducedMotion();
@@ -215,9 +243,9 @@ function ProjectRow({
 
   return (
     <li
-      onPointerEnter={(e) => e.pointerType === "mouse" && onHover(p.skills)}
-      onFocus={() => onHover(p.skills)}
-      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && onHover(null)}
+      onPointerEnter={(e) => e.pointerType === "mouse" && onHover?.(p.skills)}
+      onFocus={() => onHover?.(p.skills)}
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && onHover?.(null)}
       className="relative border-b border-line transition-opacity duration-300"
       style={{ opacity: match === false ? 0.35 : 1 }}
     >
@@ -225,7 +253,7 @@ function ProjectRow({
       <h3>
         <button
           type="button"
-          onClick={onToggle}
+          onClick={(e) => onToggle(e.currentTarget)}
           aria-expanded={open}
           aria-controls={panelId}
           className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 py-3 text-left transition-colors hover:bg-bg-2 sm:grid-cols-[8.5rem_minmax(0,1fr)_auto] sm:gap-x-6"

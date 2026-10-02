@@ -484,6 +484,13 @@ export default function RadialChart({
                 </g>
               );
             })}
+            {/* compact (phones): names of the highlighted skills */}
+            {frame.compact && (
+              <Callouts
+                frame={frame}
+                items={slots.filter((s) => s.kind === "leaf" && lit(s) === "on").map((s) => ({ id: s.id, label: s.label, color: s.color, p: pos(s.id) }))}
+              />
+            )}
           </svg>
 
           {renderOverlay?.(frame)}
@@ -511,6 +518,75 @@ export default function RadialChart({
         </div>
       )}
     </div>
+  );
+}
+
+type Callout = { id: string; label: string; color: string; p: Vec };
+
+/**
+ * Compact charts (phones) have no room for names outside the disc, so the highlighted skills
+ * (an open project's, or the one being touched) get flat labels inside it, next to their dots,
+ * reaching toward the centre. Placed top to bottom; a label that would hit another, the
+ * portrait or the edge is nudged up or down a line (then tried on the dot's other side),
+ * with a hairline back to its dot.
+ */
+function placeCallouts(f: Frame, items: Callout[]) {
+  const font = f.fontSize - 1;
+  const lh = font + 4;
+  const pad = 2;
+  const portrait = { x0: f.cx - f.root / 2 - 6, x1: f.cx + f.root / 2 + 6, y0: f.cy - f.root / 2 - 6, y1: f.height };
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [portrait, { x0: 0, x1: 96, y0: 0, y1: 22 }]; // the "touch a node" chip
+  const hits = (r: (typeof placed)[number]) => placed.some((o) => r.x0 < o.x1 + pad && r.x1 > o.x0 - pad && r.y0 < o.y1 + pad && r.y1 > o.y0 - pad);
+  const inBox = (r: (typeof placed)[number]) => r.x0 >= 2 && r.x1 <= f.width - 2 && r.y0 >= 2 && r.y1 <= f.height - 2;
+  const tries = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+
+  return [...items]
+    .sort((a, b) => a.p.y - b.p.y)
+    .map((it) => {
+      const w = it.label.length * font * CHAR_W;
+      const sides = it.p.x < f.cx ? [1, -1] : [-1, 1]; // 1: label to the right of the dot
+      for (const side of sides)
+        for (const k of tries) {
+          const x0 = side === 1 ? it.p.x + 9 : it.p.x - 9 - w;
+          const yc = it.p.y + k * lh;
+          const r = { x0, x1: x0 + w, y0: yc - lh / 2, y1: yc + lh / 2 };
+          if (inBox(r) && !hits(r)) {
+            placed.push(r);
+            const anchor: "start" | "end" = side === 1 ? "start" : "end";
+            return { ...it, x: side === 1 ? r.x0 : r.x1, y: yc, anchor, moved: k !== 0 || side !== sides[0], font };
+          }
+        }
+      const x = it.p.x < f.cx ? it.p.x + 9 : it.p.x - 9;
+      const anchor: "start" | "end" = it.p.x < f.cx ? "start" : "end";
+      return { ...it, x, y: it.p.y, anchor, moved: false, font };
+    });
+}
+
+function Callouts({ frame, items }: { frame: Frame; items: Callout[] }) {
+  if (!items.length) return null;
+  return (
+    <g aria-hidden pointerEvents="none">
+      {placeCallouts(frame, items).map((c) => (
+        <g key={c.id}>
+          {c.moved && <line x1={c.p.x} y1={c.p.y} x2={c.anchor === "start" ? c.x - 2 : c.x + 2} y2={c.y} stroke={c.color} strokeWidth={1} />}
+          <text
+            x={c.x}
+            y={c.y}
+            textAnchor={c.anchor}
+            dominantBaseline="central"
+            fill={INK}
+            stroke="#fff"
+            strokeWidth={3.5}
+            paintOrder="stroke"
+            strokeLinejoin="round"
+            fontWeight={550}
+            style={{ fontSize: c.font }}
+          >
+            {c.label}
+          </text>
+        </g>
+      ))}
+    </g>
   );
 }
 

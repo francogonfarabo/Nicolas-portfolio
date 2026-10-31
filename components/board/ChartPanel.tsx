@@ -24,7 +24,6 @@ export default function ChartPanel({
   instant,
   litFamilies,
   shown,
-  dimShown,
   skills,
   usage,
   profile,
@@ -41,7 +40,6 @@ export default function ChartPanel({
   instant: boolean;
   litFamilies: Set<string> | null;
   shown: string[] | null;
-  dimShown: boolean;
   skills: Skills;
   usage: Record<string, number>;
   profile: Profile;
@@ -211,10 +209,8 @@ export default function ChartPanel({
                 usage={usage}
                 lit={litFamilies}
                 shown={shown}
-                dimShown={dimShown}
                 hideBoxes={!!flight?.toStrip}
                 pulse={pulse}
-                onActiveSkill={onActiveSkill}
               />
             </motion.div>
           )}

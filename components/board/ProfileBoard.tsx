@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Profile, Skills, Work } from "@/content/types";
 import ChartPanel, { type ChartView } from "./ChartPanel";
 import SectionChips, { type SectionChip } from "./SectionChips";
@@ -13,8 +13,10 @@ export type SkillMeta = { label: string; color: string; family: string };
 /**
  * The one-pager's core, in one column: who Nico is, then the skills map pinned under
  * the header while the work history scrolls beneath it (on laptops/tablets as a slim strip).
- * Hover a project → its skills (strip: its families) light up; open one → they stay lit and the
- * strip lays them out. Hover a skill → the projects that used it light up.
+ * Open a project → it's the visitor's focus: its skills stay lit (the strip lays them out) and
+ * hovering other projects changes nothing until it's closed. With nothing open, hovering a project
+ * lights its skills (strip: tints its families). Hover a skill in the radial chart → the projects
+ * that used it light up.
  */
 export default function ProfileBoard({ profile, work, skills }: { profile: Profile; work: Work; skills: Skills }) {
   const { t } = useI18n();
@@ -24,6 +26,14 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
 
   /** The project under the pointer / focus (desktop), and the project the visitor opened. */
   const [hoverSkills, setHoverSkills] = useState<string[] | null>(null);
+  // Hover intent: a short pause before lighting up (and before letting go), so running the
+  // pointer down the list doesn't make the map flicker.
+  const hoverTimer = useRef<number | undefined>(undefined);
+  const onProjectHover = useCallback((skills: string[] | null) => {
+    window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(() => setHoverSkills(skills), 140);
+  }, []);
+  useEffect(() => () => window.clearTimeout(hoverTimer.current), []);
   const [openSkills, setOpenSkills] = useState<string[] | null>(null);
   const [view, setView] = useState<{ view: ChartView; instant: boolean }>({ view: "radial", instant: true });
   const [familyHover, setFamilyHover] = useState<string | null>(null);
@@ -38,7 +48,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
     [skills],
   );
 
-  const projectSkills = hoverSkills ?? openSkills;
+  // The open project is the focus; hover only speaks when nothing is open.
+  const projectSkills = openSkills ?? hoverSkills;
   const highlight = useMemo(() => {
     if (projectSkills) return new Set(projectSkills);
     if (familyHover) {
@@ -96,7 +107,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
             instant={view.instant}
             litFamilies={litFamilies}
             shown={openSkills}
-            dimShown={!!hoverSkills && hoverSkills !== openSkills}
             skills={skills}
             usage={usage}
             profile={profile}
@@ -116,7 +126,7 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
           work={work}
           skillIndex={skillIndex}
           activeSkill={activeSkill}
-          onProjectHover={setHoverSkills}
+          onProjectHover={onProjectHover}
           onProjectSelect={setOpenSkills}
           onSkillTag={(key) => setPulse({ id: key, key: Date.now() })}
         />

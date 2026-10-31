@@ -172,7 +172,7 @@ svg [role="slider"]:focus-visible {
 /* A strip box or skill being pointed at from a project's tags */
 .box-ping {
   pointer-events: none;
-  animation: box-ping 0.9s var(--ease-out-soft) 3;
+  animation: box-ping 0.9s var(--ease-out-soft) 1;
 }
 
 .chart-ping {

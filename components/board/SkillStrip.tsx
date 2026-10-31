@@ -69,32 +69,27 @@ function placeSkills(groups: { cat: SkillCategory; skills: { key: string; label:
 
 /**
  * The pinned, horizontal form of the skills map (laptop/tablet, once the radial chart reaches
- * the header). Every family is always visible as a box. Hovering a project lights up its families;
- * opening one also lays out its skills under them, joined by curves. Hovering a box previews
- * that family's skills in a small panel that floats over the page (so nothing moves).
+ * the header): a quiet row of the seven families. It only reflects the project the visitor is on:
+ * hovering one (with nothing open) tints its families; opening one also lays out its skills under
+ * them, joined by curves. Nothing in the strip reacts to the pointer itself.
  */
 export default function SkillStrip({
   categories,
   usage,
   lit,
   shown,
-  dimShown,
   hideBoxes,
   pulse,
-  onActiveSkill,
 }: {
   categories: SkillCategory[];
   usage: Record<string, number>;
-  /** Families to light up (the hovered or open project's); null = none in particular. */
+  /** Families to tint (the open project's, else the hovered one's); null = none. */
   lit: Set<string> | null;
   /** Skill keys laid out under the boxes (the open project's). */
   shown: string[] | null;
-  /** Another project is hovered: fade the open project's skills while its families show. */
-  dimShown: boolean;
   /** While the families fly in from the radial chart, the boxes wait underneath. */
   hideBoxes: boolean;
   pulse: { id: string; key: number } | null;
-  onActiveSkill: (key: string | null) => void;
 }) {
   const { t } = useI18n();
   const reduce = !!useReducedMotion();
@@ -102,7 +97,6 @@ export default function SkillStrip({
   const boxRefs = useRef(new Map<string, HTMLElement>());
   const [boxes, setBoxes] = useState<Record<string, Box>>({});
   const [width, setWidth] = useState(0);
-  const [preview, setPreview] = useState<string | null>(null);
 
   // Where each family box sits, for the curves and for centring its skills.
   useLayoutEffect(() => {
@@ -147,68 +141,28 @@ export default function SkillStrip({
       </h2>
       <ul className="flex gap-1.5" aria-label={t.chart.families}>
         {categories.map((c) => {
-          const state = !lit ? "neutral" : lit.has(c.id) || preview === c.id ? "on" : "off";
+          const on = !!lit?.has(c.id);
           return (
-            <li key={c.id} className="relative flex min-w-0 flex-auto">
-              <button
-                type="button"
-                ref={(el) => {
-                  if (el) boxRefs.current.set(c.id, el);
-                  else boxRefs.current.delete(c.id);
-                }}
-                data-cat-box={c.id}
-                aria-expanded={preview === c.id}
-                aria-label={t.chart.family(c.label, c.skills.length)}
-                onPointerEnter={(e) => e.pointerType === "mouse" && setPreview(c.id)}
-                onPointerLeave={(e) => e.pointerType === "mouse" && setPreview((p) => (p === c.id ? null : p))}
-                // Mouse: hover. Keyboard: focus (and Enter toggles). Touch: tap toggles.
-                onFocus={(e) => e.currentTarget.matches(":focus-visible") && setPreview(c.id)}
-                onBlur={() => setPreview((p) => (p === c.id ? null : p))}
-                onClick={(e) => {
-                  if ((e.nativeEvent as PointerEvent).pointerType === "mouse") return;
-                  setPreview((p) => (p === c.id ? null : c.id));
-                }}
-                className="relative flex w-full min-w-0 cursor-default items-center justify-center gap-1.5 border border-(--b) px-2 py-1.5 text-center font-mono text-[10.5px] leading-tight whitespace-nowrap transition-[background-color,border-color,color,opacity] duration-300 @max-[690px]:border-t-2 @max-[690px]:border-t-(--c) @max-[690px]:px-1.5 @max-[690px]:pt-[5px]"
-                style={{
-                  visibility: hideBoxes ? "hidden" : undefined,
-                  ["--c" as string]: c.color,
-                  ["--b" as string]: state === "on" || preview === c.id ? c.color : "var(--color-line)",
-                  background: state === "on" || preview === c.id ? `color-mix(in srgb, ${c.color} 9%, white)` : "white",
-                  color: state === "off" ? "var(--color-ink-3)" : "var(--color-ink)",
-                  opacity: state === "off" && preview !== c.id ? 0.6 : 1,
-                }}
-              >
-                <span className="size-[7px] shrink-0 @max-[690px]:hidden" style={{ background: c.color }} aria-hidden />
-                <span className="min-w-0">{c.label}</span>
-                {pulseCat === c.id && <span key={pulse!.key} aria-hidden className="box-ping absolute -inset-px border" style={{ borderColor: c.color }} />}
-              </button>
-
-              {/* Hover / focus / tap a family: its skills, floating over the page */}
-              <AnimatePresence>
-                {preview === c.id && (
-                  <motion.div
-                    initial={reduce ? false : { opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
-                    transition={{ duration: 0.2, ease }}
-                    className="absolute top-full z-20 mt-1.5 flex w-max max-w-[18rem] flex-wrap gap-1 border border-line bg-white p-1.5"
-                    style={(boxes[c.id]?.x ?? 0) > width / 2 ? { right: 0 } : { left: 0 }}
-                  >
-                    {c.skills.map((s) => (
-                      <span
-                        key={s.key}
-                        onPointerEnter={(e) => e.pointerType === "mouse" && onActiveSkill(s.key)}
-                        onPointerLeave={(e) => e.pointerType === "mouse" && onActiveSkill(null)}
-                        className="inline-flex items-center gap-1.5 border px-1.5 py-0.5 font-mono text-[10.5px] whitespace-nowrap text-ink-2"
-                        style={{ borderColor: `color-mix(in srgb, ${c.color} 45%, white)` }}
-                      >
-                        <span className="size-1.5" style={{ background: c.color }} aria-hidden />
-                        {s.label}
-                      </span>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            <li
+              key={c.id}
+              ref={(el) => {
+                if (el) boxRefs.current.set(c.id, el);
+                else boxRefs.current.delete(c.id);
+              }}
+              data-cat-box={c.id}
+              aria-label={t.chart.family(c.label, c.skills.length)}
+              className="relative flex min-w-0 flex-auto items-center justify-center gap-1.5 border border-(--b) px-2 py-1.5 text-center font-mono text-[10.5px] leading-tight whitespace-nowrap transition-[background-color,border-color,color] duration-500 @max-[690px]:border-t-2 @max-[690px]:border-t-(--c) @max-[690px]:px-1.5 @max-[690px]:pt-[5px]"
+              style={{
+                visibility: hideBoxes ? "hidden" : undefined,
+                ["--c" as string]: c.color,
+                ["--b" as string]: on ? c.color : "var(--color-line)",
+                background: on ? `color-mix(in srgb, ${c.color} 9%, white)` : "white",
+                color: lit && !on ? "var(--color-ink-2)" : "var(--color-ink)",
+              }}
+            >
+              <span className="size-[7px] shrink-0 @max-[690px]:hidden" style={{ background: c.color }} aria-hidden />
+              <span className="min-w-0">{c.label}</span>
+              {pulseCat === c.id && <span key={pulse!.key} aria-hidden className="box-ping absolute -inset-px border" style={{ borderColor: c.color }} />}
             </li>
           );
         })}
@@ -239,7 +193,7 @@ export default function SkillStrip({
                   stroke={it.color}
                   strokeWidth={1}
                   initial={reduce ? false : { pathLength: 0, opacity: 0 }}
-                  animate={{ d, pathLength: 1, opacity: dimShown ? 0.25 : 0.8 }}
+                  animate={{ d, pathLength: 1, opacity: 0.8 }}
                   exit={{ opacity: 0, transition: { duration: 0.15 } }}
                   transition={{ duration: reduce ? 0 : 0.45, ease }}
                 />
@@ -253,7 +207,7 @@ export default function SkillStrip({
               <motion.li
                 key={it.key}
                 initial={reduce ? false : { opacity: 0, x: it.x, y: CONNECT + it.row * ROW_H - 6 }}
-                animate={{ opacity: dimShown ? 0.35 : 1, x: it.x, y: CONNECT + it.row * ROW_H }}
+                animate={{ opacity: 1, x: it.x, y: CONNECT + it.row * ROW_H }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{ duration: reduce ? 0 : 0.4, ease, delay: reduce ? 0 : 0.06 + i * 0.03 }}
                 className="absolute top-0 left-0"
@@ -261,8 +215,6 @@ export default function SkillStrip({
               >
                 <span
                   aria-label={t.chart.skill(it.label, usage[it.key] ?? 0)}
-                  onPointerEnter={(e) => e.pointerType === "mouse" && onActiveSkill(it.key)}
-                  onPointerLeave={(e) => e.pointerType === "mouse" && onActiveSkill(null)}
                   className="relative flex h-full items-center gap-1.5 border bg-white px-1.5 font-mono text-[10.5px] whitespace-nowrap text-ink"
                   style={{ borderColor: it.color }}
                 >

@@ -17,8 +17,8 @@ function Period({ start, end, current }: { start: string; end?: string; current:
 }
 
 /**
- * Holds a row still on screen while the project above it collapses (phones open one at a time),
- * so the tapped project doesn't jump away from under the finger.
+ * Holds a row still on screen while the project above it collapses (one opens at a time),
+ * so the chosen project doesn't jump away from under the pointer or finger.
  */
 function keepInPlace(el: HTMLElement) {
   const top = el.getBoundingClientRect().top;
@@ -57,7 +57,7 @@ export default function WorkPanel({
   activeSkill: string | null;
   /** The project under the pointer / keyboard focus (desktop). */
   onProjectHover: (skills: string[] | null) => void;
-  /** The project the visitor opened (the latest one still open), or null. */
+  /** The project the visitor opened, or null. */
   onProjectSelect: (skills: string[] | null) => void;
   onSkillTag: (key: string) => void;
 }) {
@@ -65,28 +65,15 @@ export default function WorkPanel({
   const phone = usePhone();
   const firstRich = work.projects.findIndex((p) => p.bullets.length > 2);
   const [open, setOpen] = useState<Set<number>>(() => new Set(firstRich >= 0 ? [firstRich] : []));
-  // Projects the visitor opened, oldest first (the one open on arrival doesn't count): the latest
-  // still open is the one the skills map shows.
-  const [opened, setOpened] = useState<number[]>([]);
+  // One project open at a time: the one the visitor opens is their focus, and the skills map shows
+  // it until it's closed (the card open on arrival doesn't count until it's chosen).
+  const [selected, setSelected] = useState<number | undefined>(undefined);
   const toggle = (i: number, row: HTMLElement) => {
     const opening = !open.has(i);
-    // Phones (no hover): one project open at a time, and the open one lights up its skills
-    // in the pinned chart until it's closed.
-    if (phone) {
-      setOpen(opening ? new Set([i]) : new Set());
-      setOpened(opening ? [i] : []);
-      if (opening) keepInPlace(row);
-      return;
-    }
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (opening) next.add(i);
-      else next.delete(i);
-      return next;
-    });
-    setOpened((prev) => [...prev.filter((x) => x !== i), ...(opening ? [i] : [])]);
+    setOpen(opening ? new Set([i]) : new Set());
+    setSelected(opening ? i : undefined);
+    if (opening) keepInPlace(row);
   };
-  const selected = opened.at(-1);
   useEffect(() => {
     onProjectSelect(selected === undefined ? null : work.projects[selected].skills);
   }, [selected, work, onProjectSelect]);

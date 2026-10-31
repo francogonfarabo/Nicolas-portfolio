@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Profile, Skills, Work } from "@/content/types";
-import ChartPanel from "./ChartPanel";
+import ChartPanel, { type ChartView } from "./ChartPanel";
 import SectionChips, { type SectionChip } from "./SectionChips";
 import WorkPanel from "./WorkPanel";
 import { useI18n } from "../I18n";
@@ -12,8 +12,9 @@ export type SkillMeta = { label: string; color: string; family: string };
 
 /**
  * The one-pager's core, in one column: who Nico is, then the skills map pinned under
- * the header while the work history scrolls beneath it.
- * Hover/tap a project → its skills light up. Hover a skill → the projects that used it light up.
+ * the header while the work history scrolls beneath it (on laptops/tablets as a slim strip).
+ * Hover a project → its skills (strip: its families) light up; open one → they stay lit and the
+ * strip lays them out. Hover a skill → the projects that used it light up.
  */
 export default function ProfileBoard({ profile, work, skills }: { profile: Profile; work: Work; skills: Skills }) {
   const { t } = useI18n();
@@ -21,7 +22,10 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   const [pinned, setPinned] = useState(false);
   const revealed = hovered || pinned;
 
-  const [projectSkills, setProjectSkills] = useState<string[] | null>(null);
+  /** The project under the pointer / focus (desktop), and the project the visitor opened. */
+  const [hoverSkills, setHoverSkills] = useState<string[] | null>(null);
+  const [openSkills, setOpenSkills] = useState<string[] | null>(null);
+  const [view, setView] = useState<{ view: ChartView; instant: boolean }>({ view: "radial", instant: true });
   const [familyHover, setFamilyHover] = useState<string | null>(null);
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
   const [pulse, setPulse] = useState<{ id: string; key: number } | null>(null);
@@ -34,6 +38,7 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
     [skills],
   );
 
+  const projectSkills = hoverSkills ?? openSkills;
   const highlight = useMemo(() => {
     if (projectSkills) return new Set(projectSkills);
     if (familyHover) {
@@ -54,7 +59,11 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
       ].filter((x): x is SectionChip => !!x),
     [work, t],
   );
-  const activeSections = useActiveSection(sections);
+  const activeSections = useScrollState(sections, (v, instant) => setView({ view: v, instant }));
+  const litFamilies = useMemo(
+    () => (projectSkills ? new Set(skills.categories.filter((c) => c.skills.some((s) => projectSkills.includes(s.key))).map((c) => c.id)) : null),
+    [projectSkills, skills],
+  );
 
   const since = profile.since ? ` · ${t.profile.since(profile.since)}` : "";
   /** How many projects used each skill: the chart's evidence of experience. */
@@ -65,7 +74,7 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   }, [work]);
 
   return (
-    // No scroll anchoring here: the chart shrinking above the fold would make the browser shift
+    // No scroll anchoring here: the chart changing form above the fold would make the browser shift
     // the page to compensate, fighting the scroll that drives it (and the section chips' targets).
     <section id="top" aria-label={t.profile.section} className="border-b border-line [overflow-anchor:none]">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
@@ -83,6 +92,11 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
         {/* Skills map: pinned under the header */}
         <div id="pin-block" className="sticky top-(--header-h) z-30 -mx-4 bg-white px-4 pt-2 pb-1 sm:-mx-6 sm:px-6">
           <ChartPanel
+            view={view.view}
+            instant={view.instant}
+            litFamilies={litFamilies}
+            shown={openSkills}
+            dimShown={!!hoverSkills && hoverSkills !== openSkills}
             skills={skills}
             usage={usage}
             profile={profile}
@@ -102,7 +116,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
           work={work}
           skillIndex={skillIndex}
           activeSkill={activeSkill}
-          onProjectHover={setProjectSkills}
+          onProjectHover={setHoverSkills}
+          onProjectSelect={setOpenSkills}
           onSkillTag={(key) => setPulse({ id: key, key: Date.now() })}
         />
       </div>
@@ -111,24 +126,30 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
 }
 
 /**
- * Sizes the chart while scrolling and keeps --stuck-offset (the pinned block's height once
- * stuck, used as the sections' scroll margin) up to date; reports which section sits under it.
+ * Follows the scroll: picks the chart's form, sizes the radial one, keeps --stuck-offset (the
+ * pinned block's height once stuck, used as the sections' scroll margin) up to date, and reports
+ * which section sits under the pinned block.
  *
- * Laptop/tablet: at the top the chart takes all the room the screen has under the name; as the
- * block rises to the header it shrinks to its pinned size (--chart-area), tracking the scroll.
- * Phones keep the fixed compact size.
+ * Laptop/tablet: the radial chart takes all the room the screen has under the name; when the
+ * block reaches the header it turns into the strip, and back once the visitor scrolls 40px
+ * above that point (the gap stops it flickering at the line). Phones keep the compact radial chart.
  */
-function useActiveSection(sections: SectionChip[]) {
+function useScrollState(sections: SectionChip[], onView: (view: ChartView, instant: boolean) => void) {
   const [active, setActive] = useState<string[]>([]);
   const lastKey = useRef("");
+  const viewCb = useRef(onView);
+  viewCb.current = onView;
 
   useEffect(() => {
     const block = document.getElementById("pin-block");
     if (!block) return;
     const root = document.documentElement;
+    const mounted = performance.now();
     let raf = 0;
     let offset = -1;
     let lastCap = "";
+    let view: ChartView = "radial";
+    let stripH = 0;
     // Measures --chart-area (the pinned cap) in px.
     const pinProbe = document.createElement("div");
     pinProbe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;width:0;height:var(--chart-area)";
@@ -137,21 +158,35 @@ function useActiveSection(sections: SectionChip[]) {
     const update = () => {
       raf = 0;
       const headerH = parseFloat(getComputedStyle(root).getPropertyValue("--header-h")) || 48;
-      const chart = block.querySelector<HTMLElement>("[data-chart]");
-      const pinCap = pinProbe.offsetHeight;
+      const panel = block.querySelector<HTMLElement>("#skills");
+      const phone = window.matchMedia(PHONE_QUERY).matches;
+      const restTop = (block.previousElementSibling?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
+      const stickAt = restTop - headerH;
+      const around = panel ? block.offsetHeight - panel.offsetHeight : 0; // chips and padding
+
+      let next = view;
+      if (phone) next = "radial";
+      else if (view === "radial" && window.scrollY >= stickAt - 1) next = "strip";
+      else if (view === "strip" && window.scrollY < stickAt - 40) next = "radial";
+      if (next !== view) {
+        view = next;
+        // Landing mid-page (reload, a link to a section) shouldn't play the flight.
+        viewCb.current(next, performance.now() - mounted < 700);
+      }
+
       let pinnedH = block.offsetHeight;
-      if (chart && !window.matchMedia(PHONE_QUERY).matches) {
-        const chrome = block.offsetHeight - chart.offsetHeight; // title bar, chips, padding
-        const restTop = (block.previousElementSibling?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
-        const startCap = Math.max(pinCap, Math.min(520, window.innerHeight - restTop - chrome - 16));
-        const t = Math.min(1, Math.max(0, window.scrollY / Math.max(1, restTop - headerH)));
-        const cap = `${Math.round(startCap + (pinCap - startCap) * t)}px`;
+      if (!phone) {
+        // The radial chart's cap: what's left of the screen under the name.
+        const titleBar = block.querySelector<HTMLElement>("[data-titlebar]");
+        const chrome = around + (titleBar?.offsetHeight ?? 37) + 10;
+        const cap = `${Math.round(Math.max(pinProbe.offsetHeight, Math.min(520, window.innerHeight - restTop - chrome - 16)))}px`;
         if (cap !== lastCap) {
           lastCap = cap;
           block.style.setProperty("--chart-cap", cap);
         }
-        // The chart never gets taller than the cap, so once pinned it's min(pinned cap, its own height).
-        pinnedH = chrome + Math.min(pinCap, chart.offsetHeight);
+        if (view === "strip" && panel && !panel.querySelector("[data-chart]")) stripH = block.offsetHeight;
+        // Sections land under the strip (its last height, or about a row of boxes before it's been shown).
+        pinnedH = view === "strip" || stripH ? stripH || block.offsetHeight : around + 48;
       } else if (lastCap) {
         lastCap = "";
         block.style.removeProperty("--chart-cap");

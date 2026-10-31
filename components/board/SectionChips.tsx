@@ -10,10 +10,11 @@ export type SectionChip = { id: string; label: string };
  * The section currently under the map is marked (two when they sit side by side).
  */
 /**
- * Scrolls a section to just under the pinned block. Done by hand rather than by the anchor:
- * on laptops the chart shrinks while the page scrolls, which moves the section up mid-scroll,
- * so the target is where the section will be once the block is pinned (same 16px gap as the
- * scroll margins give).
+ * Scrolls a section to just under the pinned block (16px gap, as the scroll margins give). Done by
+ * hand rather than by the anchor: on laptops the skills map turns from the radial chart into the
+ * strip mid-scroll, which moves the section up, so the target is where the section will be once
+ * the block is pinned. That change can also cut a smooth scroll short, so it checks where the
+ * section ended up and finishes the job if needed.
  */
 function goTo(e: React.MouseEvent, id: string) {
   const block = document.getElementById("pin-block");
@@ -23,6 +24,14 @@ function goTo(e: React.MouseEvent, id: string) {
   const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 48;
   window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - block.offsetHeight - headerH - 16 });
   history.replaceState(null, "", `#${id}`);
+  let tries = 0;
+  const check = () => {
+    const off = el.getBoundingClientRect().top - block.getBoundingClientRect().bottom - 16;
+    const atBottom = Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1;
+    if (Math.abs(off) > 2 && !(off > 0 && atBottom)) window.scrollBy({ top: off });
+    if (++tries < 3) window.setTimeout(check, 700);
+  };
+  window.setTimeout(check, 900);
 }
 
 export default function SectionChips({ sections, active }: { sections: SectionChip[]; active: string[] }) {

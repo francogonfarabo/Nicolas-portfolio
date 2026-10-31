@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Project, Work } from "@/content/types";
 import type { SkillMeta } from "./ProfileBoard";
@@ -49,35 +49,47 @@ export default function WorkPanel({
   skillIndex,
   activeSkill,
   onProjectHover,
+  onProjectSelect,
   onSkillTag,
 }: {
   work: Work;
   skillIndex: Map<string, SkillMeta>;
   activeSkill: string | null;
+  /** The project under the pointer / keyboard focus (desktop). */
   onProjectHover: (skills: string[] | null) => void;
+  /** The project the visitor opened (the latest one still open), or null. */
+  onProjectSelect: (skills: string[] | null) => void;
   onSkillTag: (key: string) => void;
 }) {
   const { t } = useI18n();
   const phone = usePhone();
   const firstRich = work.projects.findIndex((p) => p.bullets.length > 2);
   const [open, setOpen] = useState<Set<number>>(() => new Set(firstRich >= 0 ? [firstRich] : []));
+  // Projects the visitor opened, oldest first (the one open on arrival doesn't count): the latest
+  // still open is the one the skills map shows.
+  const [opened, setOpened] = useState<number[]>([]);
   const toggle = (i: number, row: HTMLElement) => {
+    const opening = !open.has(i);
     // Phones (no hover): one project open at a time, and the open one lights up its skills
     // in the pinned chart until it's closed.
     if (phone) {
-      const opening = !open.has(i);
       setOpen(opening ? new Set([i]) : new Set());
-      onProjectHover(opening ? work.projects[i].skills : null);
+      setOpened(opening ? [i] : []);
       if (opening) keepInPlace(row);
       return;
     }
     setOpen((prev) => {
       const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
+      if (opening) next.add(i);
+      else next.delete(i);
       return next;
     });
+    setOpened((prev) => [...prev.filter((x) => x !== i), ...(opening ? [i] : [])]);
   };
+  const selected = opened.at(-1);
+  useEffect(() => {
+    onProjectSelect(selected === undefined ? null : work.projects[selected].skills);
+  }, [selected, work, onProjectSelect]);
 
   const earliest = work.roles.at(-1)?.start;
   const usedIn = activeSkill ? work.projects.filter((p) => p.skills.includes(activeSkill)).length : 0;

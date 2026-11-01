@@ -5,8 +5,9 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { SkillCategory } from "@/content/types";
 import { useI18n } from "../I18n";
 
-/** Room for the connectors between a family box and its skills, and one row of skill boxes. */
+/** Room for the connectors between a family box and its skills (or just a gap, without them), and one row of skill boxes. */
 const CONNECT = 20;
+const GAP = 8;
 const ROW_H = 26;
 const ITEM_H = 22;
 /** Geist Mono advances 0.6em, so a 10.5px label is 6.3px a character; plus padding, square and border. */
@@ -14,15 +15,21 @@ const itemWidth = (label: string) => Math.ceil(label.length * 6.3) + 26;
 const ITEM_GAP = 6;
 const GROUP_GAP = 12;
 
-type Box = { x: number; w: number };
+type Box = { x: number; y: number; w: number };
 type Placed = { key: string; label: string; color: string; cat: string; x: number; w: number; row: number };
 
 /**
  * Places the shown skills under their families: each family's skills sit side by side, centred
  * under its box, then pushed apart (and back inside the strip) where neighbours would overlap.
- * Too many to fit on one line → plain rows, left to right.
+ * Too many to fit on one line, or `flow` (the boxes themselves wrap, on phones) → plain rows,
+ * left to right, in family order.
  */
-function placeSkills(groups: { cat: SkillCategory; skills: { key: string; label: string }[] }[], boxes: Record<string, Box>, width: number) {
+function placeSkills(
+  groups: { cat: SkillCategory; skills: { key: string; label: string }[] }[],
+  boxes: Record<string, Box>,
+  width: number,
+  flow: boolean,
+) {
   const sized = groups.map((g) => {
     const items = g.skills.map((s) => ({ ...s, w: itemWidth(s.label) }));
     const span = items.reduce((n, it) => n + it.w, 0) + ITEM_GAP * (items.length - 1);
@@ -32,7 +39,7 @@ function placeSkills(groups: { cat: SkillCategory; skills: { key: string; label:
   const total = sized.reduce((n, g) => n + g.span, 0) + GROUP_GAP * (sized.length - 1);
   const out: Placed[] = [];
 
-  if (total <= width) {
+  if (total <= width && !flow) {
     let edge = -Infinity;
     for (const g of sized) {
       g.x = Math.max(g.x, 0, edge + GROUP_GAP);
@@ -72,6 +79,9 @@ function placeSkills(groups: { cat: SkillCategory; skills: { key: string; label:
  * the header): a quiet row of the seven families. It only reflects the project the visitor is on:
  * hovering one (with nothing open) tints its families; opening one also lays out its skills under
  * them, joined by curves. Nothing in the strip reacts to the pointer itself.
+ *
+ * Phones: the boxes wrap onto two rows (colour bar instead of square), and an open project's skills
+ * follow as a row of colour-coded chips, without curves (they'd cross the second row).
  */
 export default function SkillStrip({
   categories,
@@ -107,7 +117,7 @@ export default function SkillStrip({
       const next: Record<string, Box> = {};
       boxRefs.current.forEach((b, id) => {
         const r = b.getBoundingClientRect();
-        next[id] = { x: r.left - left, w: r.width };
+        next[id] = { x: r.left - left, y: r.top, w: r.width };
       });
       setBoxes(next);
       setWidth(el.clientWidth);
@@ -119,17 +129,20 @@ export default function SkillStrip({
     return () => ro.disconnect();
   }, [categories]);
 
+  // Boxes on more than one row (phones): skills flow under them, without curves.
+  const wrapped = new Set(Object.values(boxes).map((b) => Math.round(b.y))).size > 1;
+  const top = wrapped ? GAP : CONNECT;
   const placed = useMemo(() => {
     if (!shown?.length || !width) return { items: [], rows: 0 };
     const set = new Set(shown);
     const groups = categories
       .map((cat) => ({ cat, skills: cat.skills.filter((s) => set.has(s.key)).map((s) => ({ key: s.key, label: s.label })) }))
       .filter((g) => g.skills.length);
-    return placeSkills(groups, boxes, width);
-  }, [shown, categories, boxes, width]);
+    return placeSkills(groups, boxes, width, wrapped);
+  }, [shown, categories, boxes, width, wrapped]);
 
   const pulseCat = pulse ? categories.find((c) => c.skills.some((s) => s.key === pulse.id))?.id : undefined;
-  const subH = placed.rows ? CONNECT + placed.rows * ROW_H : 0;
+  const subH = placed.rows ? top + placed.rows * ROW_H : 0;
   const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
@@ -139,7 +152,7 @@ export default function SkillStrip({
       <h2 id="skills-title" className="sr-only">
         {t.chart.title}
       </h2>
-      <ul className="flex gap-1.5" aria-label={t.chart.families}>
+      <ul className="flex flex-wrap gap-1.5" aria-label={t.chart.families}>
         {categories.map((c) => {
           const on = !!lit?.has(c.id);
           return (
@@ -180,7 +193,7 @@ export default function SkillStrip({
           <AnimatePresence>
             {placed.items.map((it) => {
               const b = boxes[it.cat];
-              if (!b) return null;
+              if (!b || wrapped) return null;
               const bx = b.x + b.w / 2;
               const sx = it.x + it.w / 2;
               const y1 = CONNECT + it.row * ROW_H;
@@ -206,8 +219,8 @@ export default function SkillStrip({
             {placed.items.map((it, i) => (
               <motion.li
                 key={it.key}
-                initial={reduce ? false : { opacity: 0, x: it.x, y: CONNECT + it.row * ROW_H - 6 }}
-                animate={{ opacity: 1, x: it.x, y: CONNECT + it.row * ROW_H }}
+                initial={reduce ? false : { opacity: 0, x: it.x, y: top + it.row * ROW_H - 6 }}
+                animate={{ opacity: 1, x: it.x, y: top + it.row * ROW_H }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
                 transition={{ duration: reduce ? 0 : 0.4, ease, delay: reduce ? 0 : 0.06 + i * 0.03 }}
                 className="absolute top-0 left-0"

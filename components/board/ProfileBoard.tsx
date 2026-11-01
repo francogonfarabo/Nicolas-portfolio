@@ -140,9 +140,9 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
  * pinned block's height once stuck, used as the sections' scroll margin) up to date, and reports
  * which section sits under the pinned block.
  *
- * Laptop/tablet: the radial chart takes all the room the screen has under the name; when the
- * block reaches the header it turns into the strip, and back once the visitor scrolls 40px
- * above that point (the gap stops it flickering at the line). Phones keep the compact radial chart.
+ * The radial chart (laptop/tablet: as big as the screen allows under the name; phones: compact)
+ * turns into the strip when the block reaches the header, and back once the visitor scrolls 40px
+ * above that point (the gap stops it flickering at the line).
  */
 function useScrollState(sections: SectionChip[], onView: (view: ChartView, instant: boolean) => void) {
   const [active, setActive] = useState<string[]>([]);
@@ -175,8 +175,7 @@ function useScrollState(sections: SectionChip[], onView: (view: ChartView, insta
       const around = panel ? block.offsetHeight - panel.offsetHeight : 0; // chips and padding
 
       let next = view;
-      if (phone) next = "radial";
-      else if (view === "radial" && window.scrollY >= stickAt - 1) next = "strip";
+      if (view === "radial" && window.scrollY >= stickAt - 1) next = "strip";
       else if (view === "strip" && window.scrollY < stickAt - 40) next = "radial";
       if (next !== view) {
         view = next;
@@ -184,9 +183,8 @@ function useScrollState(sections: SectionChip[], onView: (view: ChartView, insta
         viewCb.current(next, performance.now() - mounted < 700);
       }
 
-      let pinnedH = block.offsetHeight;
       if (!phone) {
-        // The radial chart's cap: what's left of the screen under the name.
+        // The radial chart's cap: what's left of the screen under the name (phones keep the compact size).
         const titleBar = block.querySelector<HTMLElement>("[data-titlebar]");
         const chrome = around + (titleBar?.offsetHeight ?? 37) + 10;
         const cap = `${Math.round(Math.max(pinProbe.offsetHeight, Math.min(520, window.innerHeight - restTop - chrome - 16)))}px`;
@@ -194,13 +192,13 @@ function useScrollState(sections: SectionChip[], onView: (view: ChartView, insta
           lastCap = cap;
           block.style.setProperty("--chart-cap", cap);
         }
-        if (view === "strip" && panel && !panel.querySelector("[data-chart]")) stripH = block.offsetHeight;
-        // Sections land under the strip (its last height, or about a row of boxes before it's been shown).
-        pinnedH = view === "strip" || stripH ? stripH || block.offsetHeight : around + 48;
       } else if (lastCap) {
         lastCap = "";
         block.style.removeProperty("--chart-cap");
       }
+      if (view === "strip" && panel && !panel.querySelector("[data-chart]")) stripH = block.offsetHeight;
+      // Sections land under the strip (its last height, or about its rows of boxes before it's been shown).
+      const pinnedH = view === "strip" || stripH ? stripH || block.offsetHeight : around + (phone ? 84 : 48);
       const stuck = pinnedH + 8;
       if (stuck !== offset) {
         offset = stuck;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import type { Project, Work } from "@/content/types";
 import type { SkillMeta } from "./ProfileBoard";
 import { useI18n } from "../I18n";
@@ -68,12 +68,29 @@ export default function WorkPanel({
   // One project open at a time: the one the visitor opens is their focus, and the skills map shows
   // it until it's closed (the card open on arrival doesn't count until it's chosen).
   const [selected, setSelected] = useState<number | undefined>(undefined);
+  // The card that closes because one further down opened sits above it (usually off screen):
+  // it closes at once and the page is moved back by the same amount before anything is drawn,
+  // so the chosen card stays exactly where it was tapped, with no scrolling while things animate.
+  const [snapShut, setSnapShut] = useState<number | null>(null);
+  const anchor = useRef<{ row: HTMLElement; top: number } | null>(null);
   const toggle = (i: number, row: HTMLElement) => {
     const opening = !open.has(i);
+    const prev = [...open][0];
+    setSnapShut(opening && prev !== undefined && prev < i ? prev : null);
     setOpen(opening ? new Set([i]) : new Set());
     setSelected(opening ? i : undefined);
-    if (opening) keepInPlace(row);
+    if (opening) {
+      anchor.current = { row, top: row.getBoundingClientRect().top };
+      keepInPlace(row);
+    }
   };
+  useLayoutEffect(() => {
+    const a = anchor.current;
+    if (!a) return;
+    anchor.current = null;
+    const drift = a.row.getBoundingClientRect().top - a.top;
+    if (Math.abs(drift) > 0.5) window.scrollBy({ top: drift, behavior: "instant" });
+  }, [open]);
   useEffect(() => {
     onProjectSelect(selected === undefined ? null : work.projects[selected].skills);
   }, [selected, work, onProjectSelect]);
@@ -135,6 +152,7 @@ export default function WorkPanel({
               key={p.name}
               project={p}
               open={open.has(i)}
+              snapShut={snapShut === i}
               onToggle={(row) => toggle(i, row)}
               skillIndex={skillIndex}
               match={activeSkill ? p.skills.includes(activeSkill) : null}
@@ -233,6 +251,7 @@ function Block({
 function ProjectRow({
   project: p,
   open,
+  snapShut,
   onToggle,
   skillIndex,
   match,
@@ -241,6 +260,8 @@ function ProjectRow({
 }: {
   project: Project;
   open: boolean;
+  /** Close without the animation (see WorkPanel). */
+  snapShut: boolean;
   onToggle: (row: HTMLElement) => void;
   skillIndex: Map<string, SkillMeta>;
   match: boolean | null;
@@ -252,6 +273,64 @@ function ProjectRow({
   const { t } = useI18n();
   const panelId = useId();
   const tags = p.skills.map((k) => [k, skillIndex.get(k)] as const).filter((x): x is readonly [string, SkillMeta] => !!x[1]);
+  // Opens and closes with a CSS grid-row transition (0fr ↔ 1fr): no JS measuring, which kept nudging
+  // the page's scroll on every open. Closed, it stays in the page but inert (no focus, hidden from
+  // assistive tech).
+  const panel = (
+    <div
+      id={panelId}
+      inert={!open}
+      // The details collapse the card too (the header button stays the keyboard control).
+      // Links, skill tags and text being selected don't count.
+      onClick={(e) => {
+        if ((e.target as Element).closest("a, button") || window.getSelection()?.toString()) return;
+        const head = e.currentTarget.closest("li")?.querySelector<HTMLElement>("h3 button");
+        if (!head) return;
+        onToggle(head);
+        bringBack(head);
+      }}
+      className="grid ease-(--ease-out-soft) [transition-property:grid-template-rows,opacity]"
+      style={{
+        gridTemplateRows: open ? "1fr" : "0fr",
+        opacity: open ? 1 : 0,
+        transitionDuration: reduce || snapShut ? "0ms" : "280ms",
+      }}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div className="cursor-pointer pb-4 sm:ml-[calc(8.5rem+1.5rem)]">
+          <ul className="space-y-1.5 text-[13.5px] leading-relaxed text-ink-2">
+            {p.bullets.map((b) => (
+              <li key={b} className="relative pl-4">
+                <span aria-hidden className="absolute top-0 left-0 font-mono text-ink-3">
+                  –
+                </span>
+                {b}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {tags.map(([k, s]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => onSkillTag(k)}
+                className="inline-flex items-center gap-1.5 border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2 transition-colors hover:border-ink hover:text-ink"
+              >
+                <span className="size-1.5" style={{ background: s.color }} aria-hidden />
+                {s.label}
+                <span className="sr-only">{t.work.showInMap}</span>
+              </button>
+            ))}
+            {p.url && (
+              <a href={p.url} target="_blank" rel="noreferrer" className="ml-auto font-mono text-[10.5px] text-ink-2 uppercase hover:text-ink">
+                {t.work.website} ↗<span className="sr-only"> {t.newTab}</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <li
@@ -298,60 +377,7 @@ function ProjectRow({
         </button>
       </h3>
 
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            id={panelId}
-            key="panel"
-            // The details collapse the card too (the header button stays the keyboard control).
-            // Links, skill tags and text being selected don't count.
-            onClick={(e) => {
-              if ((e.target as Element).closest("a, button") || window.getSelection()?.toString()) return;
-              const head = e.currentTarget.closest("li")?.querySelector<HTMLElement>("h3 button");
-              if (!head) return;
-              onToggle(head);
-              bringBack(head);
-            }}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={reduce ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="cursor-pointer pb-4 sm:ml-[calc(8.5rem+1.5rem)]">
-              <ul className="space-y-1.5 text-[13.5px] leading-relaxed text-ink-2">
-                {p.bullets.map((b) => (
-                  <li key={b} className="relative pl-4">
-                    <span aria-hidden className="absolute top-0 left-0 font-mono text-ink-3">
-                      –
-                    </span>
-                    {b}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                {tags.map(([k, s]) => (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => onSkillTag(k)}
-                    className="inline-flex items-center gap-1.5 border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2 transition-colors hover:border-ink hover:text-ink"
-                  >
-                    <span className="size-1.5" style={{ background: s.color }} aria-hidden />
-                    {s.label}
-                    <span className="sr-only">{t.work.showInMap}</span>
-                  </button>
-                ))}
-                {p.url && (
-                  <a href={p.url} target="_blank" rel="noreferrer" className="ml-auto font-mono text-[10.5px] text-ink-2 uppercase hover:text-ink">
-                    {t.work.website} ↗<span className="sr-only"> {t.newTab}</span>
-                  </a>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {panel}
     </li>
   );
 }

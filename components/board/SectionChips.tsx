@@ -9,29 +9,46 @@ export type SectionChip = { id: string; label: string };
  * Jump links to each part of the work history, pinned under the skills map.
  * The section currently under the map is marked (two when they sit side by side).
  */
+let navigation = 0;
+
 /**
- * Scrolls a section to just under the pinned block (16px gap, as the scroll margins give). Done by
- * hand rather than by the anchor: on laptops the skills map turns from the radial chart into the
- * strip mid-scroll, which moves the section up, so the target is where the section will be once
- * the block is pinned. That change can also cut a smooth scroll short, so it checks where the
- * section ended up and finishes the job if needed.
+ * Scrolls a section to just under the pinned block (16px gap, as the scroll margins give), in one
+ * continuous movement. Done by hand rather than with a smooth-scroll target: the skills map can
+ * fold from the radial chart into the strip mid-way, which moves the section, so each frame aims
+ * at where the section is *now* (an ease-out that settles exactly) and it only stops once the fold
+ * is over. Touching or wheeling hands control back to the visitor.
  */
 function goTo(e: React.MouseEvent, id: string) {
   const block = document.getElementById("pin-block");
   const el = document.getElementById(id);
   if (!block || !el) return;
   e.preventDefault();
-  const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 48;
-  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - block.offsetHeight - headerH - 16 });
   history.replaceState(null, "", `#${id}`);
-  let tries = 0;
-  const check = () => {
-    const off = el.getBoundingClientRect().top - block.getBoundingClientRect().bottom - 16;
-    const atBottom = Math.ceil(window.scrollY + window.innerHeight) >= document.documentElement.scrollHeight - 1;
-    if (Math.abs(off) > 2 && !(off > 0 && atBottom)) window.scrollBy({ top: off });
-    if (++tries < 3) window.setTimeout(check, 700);
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const run = ++navigation;
+  const started = performance.now();
+  let stopped = false;
+  const stop = () => (stopped = true);
+  window.addEventListener("wheel", stop, { once: true, passive: true });
+  window.addEventListener("touchstart", stop, { once: true, passive: true });
+  const done = () => {
+    window.removeEventListener("wheel", stop);
+    window.removeEventListener("touchstart", stop);
   };
-  window.setTimeout(check, 900);
+  const step = () => {
+    if (stopped || run !== navigation) return done();
+    const off = el.getBoundingClientRect().top - block.getBoundingClientRect().bottom - 16;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const blocked = (off > 0 && window.scrollY >= max - 0.5) || (off < 0 && window.scrollY <= 0);
+    const folding = !!document.querySelector("[data-flight]");
+    if ((Math.abs(off) < 0.5 || blocked) && !folding) return done();
+    if (performance.now() - started > 3000) return done();
+    // Ease out, but never by less than a pixel (the browser rounds smaller steps away).
+    const move = reduce || Math.abs(off) <= 1 ? off : Math.sign(off) * Math.max(1, Math.abs(off) * 0.16);
+    window.scrollTo({ top: Math.round(window.scrollY + move), behavior: "instant" });
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 export default function SectionChips({ sections, active }: { sections: SectionChip[]; active: string[] }) {

@@ -5,9 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { SkillCategory } from "@/content/types";
 import { useI18n } from "../I18n";
 
-/** Room for the connectors between a family box and its skills (or just a gap, without them), and one row of skill boxes. */
+/** Room for the connectors between a family box and its skills, and one row of skill boxes. */
 const CONNECT = 20;
-const GAP = 8;
 const ROW_H = 26;
 const ITEM_H = 22;
 /** Geist Mono advances 0.6em, so a 10.5px label is 6.3px a character; plus padding, square and border. */
@@ -78,10 +77,13 @@ function placeSkills(
  * The pinned, horizontal form of the skills map (laptop/tablet, once the radial chart reaches
  * the header): a quiet row of the seven families. It only reflects the project the visitor is on:
  * hovering one (with nothing open) tints its families; opening one also lays out its skills under
- * them, joined by curves. Nothing in the strip reacts to the pointer itself.
+ * them, joined by curves. Nothing in the strip reacts to the pointer itself. The skills row is
+ * always there (with a quiet hint while nothing is open), so the strip never changes height and
+ * choosing a project never moves the page.
  *
- * Phones: the boxes wrap onto two rows (colour bar instead of square), and an open project's skills
- * follow as a row of colour-coded chips, without curves (they'd cross the second row).
+ * Phones: the boxes wrap onto two rows (colour bar instead of square) and only tint, no skill row:
+ * the strip keeps one height, so choosing projects never moves the page (the open card shows its
+ * skill tags right there).
  */
 export default function SkillStrip({
   categories,
@@ -129,11 +131,11 @@ export default function SkillStrip({
     return () => ro.disconnect();
   }, [categories]);
 
-  // Boxes on more than one row (phones): skills flow under them, without curves.
+  // Boxes on more than one row (phones): no skill row, so the strip's height never changes.
   const wrapped = new Set(Object.values(boxes).map((b) => Math.round(b.y))).size > 1;
-  const top = wrapped ? GAP : CONNECT;
+  const top = CONNECT;
   const placed = useMemo(() => {
-    if (!shown?.length || !width) return { items: [], rows: 0 };
+    if (!shown?.length || !width || wrapped) return { items: [], rows: 0 };
     const set = new Set(shown);
     const groups = categories
       .map((cat) => ({ cat, skills: cat.skills.filter((s) => set.has(s.key)).map((s) => ({ key: s.key, label: s.label })) }))
@@ -142,7 +144,9 @@ export default function SkillStrip({
   }, [shown, categories, boxes, width, wrapped]);
 
   const pulseCat = pulse ? categories.find((c) => c.skills.some((s) => s.key === pulse.id))?.id : undefined;
-  const subH = placed.rows ? top + placed.rows * ROW_H : 0;
+  // One row is always reserved (laptop/tablet); phones have none. Only a project needing more rows than
+  // fit would grow it.
+  const subH = wrapped ? 0 : top + Math.max(1, placed.rows) * ROW_H;
   const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
@@ -189,6 +193,20 @@ export default function SkillStrip({
         className="relative overflow-hidden"
         aria-live="polite"
       >
+        <AnimatePresence>
+          {!wrapped && !placed.items.length && (
+            <motion.p
+              key="hint"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.3, delay: 0.15 } }}
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+              className="absolute inset-x-0 font-mono text-[10.5px] text-ink-3"
+              style={{ top: top + 4 }}
+            >
+              {t.chart.stripHint}
+            </motion.p>
+          )}
+        </AnimatePresence>
         <svg aria-hidden className="pointer-events-none absolute inset-0 overflow-visible" width={width} height={Math.max(subH, 1)}>
           <AnimatePresence>
             {placed.items.map((it) => {

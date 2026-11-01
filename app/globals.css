@@ -48,6 +48,14 @@
   }
 }
 
+/* No scroll anchoring anywhere (Chrome needs it off on both html and body): the page manages its own
+   compensation (the skills map changing form, projects opening and closing), and Chrome's anchoring
+   fought it, e.g. picking the gallery as its anchor and shifting the page when the last project opened.
+   Safari never had it, so this also makes every browser behave the same. */
+html,
+body {
+  overflow-anchor: none;
+}
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;

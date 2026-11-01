@@ -85,9 +85,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   }, [work]);
 
   return (
-    // No scroll anchoring here: the chart changing form above the fold would make the browser shift
-    // the page to compensate, fighting the scroll that drives it (and the section chips' targets).
-    <section id="top" aria-label={t.profile.section} className="border-b border-line [overflow-anchor:none]">
+    // (Scroll anchoring is off for the whole page; see globals.css.)
+    <section id="top" aria-label={t.profile.section} className="border-b border-line">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         {/* Identity (scrolls away) */}
         <div className="pt-8 pb-7 sm:pt-12">

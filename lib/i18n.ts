@@ -38,7 +38,7 @@ const en = {
     description:
       "Skills grouped by family. Use the arrow keys to move between skills; each one says how many projects used it.",
     touch: "touch a node",
-    stripHint: "open a project to see its stack",
+    stripHint: "Open a project to see its stack",
     family: (label: string, n: number) => `${label}: ${n} skills`,
     skill: (label: string, n: number) => (n ? `${label}, used in ${n} project${n === 1 ? "" : "s"}` : label),
   },
@@ -105,7 +105,7 @@ const es: Dict = {
     description:
       "Habilidades agrupadas por familia. Usa las flechas para moverte entre habilidades; cada una indica en cuántos proyectos se usó.",
     touch: "toca un nodo",
-    stripHint: "abre un proyecto para ver su stack",
+    stripHint: "Abre un proyecto para ver su stack",
     family: (label: string, n: number) => `${label}: ${n} habilidades`,
     skill: (label: string, n: number) => (n ? `${label}, usada en ${n} proyecto${n === 1 ? "" : "s"}` : label),
   },

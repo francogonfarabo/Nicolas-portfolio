@@ -5,32 +5,31 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { SkillCategory } from "@/content/types";
 import { useI18n } from "../I18n";
 
-/** Room for the connectors between a family box and its skills, and one row of skill boxes. */
-const CONNECT = 20;
-const ROW_H = 26;
-const ITEM_H = 22;
-/** Geist Mono advances 0.6em, so a 10.5px label is 6.3px a character; plus padding, square and border. */
-const itemWidth = (label: string) => Math.ceil(label.length * 6.3) + 26;
+/** Curves between a family and its skills (laptop/tablet), or a plain gap (phones); then rows of skill chips. */
+const CONNECT = 18;
+const GAP = 10;
+const ITEM_H = 24;
+const ROW_H = ITEM_H + 6;
 const ITEM_GAP = 6;
 const GROUP_GAP = 12;
+/** A chip is its label (11.5px, medium) plus padding, dot, gap and border. */
+const CHIP_FONT = "500 11.5px";
+const CHIP_EXTRA = 20 + 6 + 6 + 2;
 
 type Box = { x: number; y: number; w: number };
 type Placed = { key: string; label: string; color: string; cat: string; x: number; w: number; row: number };
+type Group = { cat: SkillCategory; skills: { key: string; label: string }[] };
+
+const mix = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, white)`;
 
 /**
- * Places the shown skills under their families: each family's skills sit side by side, centred
- * under its box, then pushed apart (and back inside the strip) where neighbours would overlap.
- * Too many to fit on one line, or `flow` (the boxes themselves wrap, on phones) → plain rows,
- * left to right, in family order.
+ * Places skills under their families: each family's skills side by side, centred under its pill,
+ * pushed apart (and back inside the strip) where neighbours would overlap. Too many for one line,
+ * or `flow` (the pills themselves wrap, on phones): plain rows, left to right, in family order.
  */
-function placeSkills(
-  groups: { cat: SkillCategory; skills: { key: string; label: string }[] }[],
-  boxes: Record<string, Box>,
-  width: number,
-  flow: boolean,
-) {
+function placeSkills(groups: Group[], boxes: Record<string, Box>, width: number, flow: boolean, widthOf: (s: string) => number) {
   const sized = groups.map((g) => {
-    const items = g.skills.map((s) => ({ ...s, w: itemWidth(s.label) }));
+    const items = g.skills.map((s) => ({ ...s, w: widthOf(s.label) }));
     const span = items.reduce((n, it) => n + it.w, 0) + ITEM_GAP * (items.length - 1);
     const box = boxes[g.cat.id];
     return { cat: g.cat, items, span, x: box ? box.x + box.w / 2 - span / 2 : 0 };
@@ -70,38 +69,46 @@ function placeSkills(
       out.push({ key: it.key, label: it.label, color: g.cat.color, cat: g.cat.id, x, w: it.w, row });
       x += it.w + ITEM_GAP;
     }
+  // Phones: each row centred under the (centred) pills.
+  if (flow)
+    for (let r = 0; r <= row; r++) {
+      const inRow = out.filter((o) => o.row === r);
+      const span = inRow.reduce((n, o) => n + o.w, 0) + ITEM_GAP * (inRow.length - 1);
+      const shift = Math.max(0, (width - span) / 2);
+      for (const o of inRow) o.x += shift;
+    }
   return { items: out, rows: row + 1 };
 }
 
 /**
- * The pinned, horizontal form of the skills map (laptop/tablet, once the radial chart reaches
- * the header): a quiet row of the seven families. It only reflects the project the visitor is on:
- * hovering one (with nothing open) tints its families; opening one also lays out its skills under
- * them, joined by curves. Nothing in the strip reacts to the pointer itself. The skills row is
- * always there (with a quiet hint while nothing is open), so the strip never changes height and
- * choosing a project never moves the page.
+ * The skills map's legend, and what stays pinned under the header while the work history scrolls:
+ * the seven families as pills. It reflects the project the visitor is on: hovering one (with nothing
+ * open) tints its families; opening one tints them and lays its skills out underneath (joined to
+ * their families by curves on laptop/tablet; in family order on phones, where the pills wrap).
  *
- * Phones: the boxes wrap onto two rows (colour bar instead of square) and only tint, no skill row:
- * the strip keeps one height, so choosing projects never moves the page (the open card shows its
- * skill tags right there).
+ * It never changes height: the skills area is sized once for the project that needs the most rows
+ * (with a quiet hint while nothing is open), so choosing projects never moves the page. Hovering a
+ * pill highlights that family in the radial chart above.
  */
 export default function SkillStrip({
   categories,
   usage,
   lit,
   shown,
-  hideBoxes,
+  reserve,
   pulse,
+  onFamilyHover,
 }: {
   categories: SkillCategory[];
   usage: Record<string, number>;
   /** Families to tint (the open project's, else the hovered one's); null = none. */
   lit: Set<string> | null;
-  /** Skill keys laid out under the boxes (the open project's). */
+  /** Skill keys laid out under the pills (the open project's). */
   shown: string[] | null;
-  /** While the families fly in from the radial chart, the boxes wait underneath. */
-  hideBoxes: boolean;
+  /** Every project's skills: the skills area is sized for the one that needs the most rows. */
+  reserve: string[][];
   pulse: { id: string; key: number } | null;
+  onFamilyHover: (id: string | null) => void;
 }) {
   const { t } = useI18n();
   const reduce = !!useReducedMotion();
@@ -109,54 +116,78 @@ export default function SkillStrip({
   const boxRefs = useRef(new Map<string, HTMLElement>());
   const [boxes, setBoxes] = useState<Record<string, Box>>({});
   const [width, setWidth] = useState(0);
+  const [font, setFont] = useState({ family: "", ready: 0 });
 
-  // Where each family box sits, for the curves and for centring its skills.
+  // Where each pill sits (for the curves and for centring its skills), and the font to measure labels in.
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
     const measure = () => {
       const left = el.getBoundingClientRect().left;
+      const top = el.getBoundingClientRect().top;
       const next: Record<string, Box> = {};
       boxRefs.current.forEach((b, id) => {
         const r = b.getBoundingClientRect();
-        next[id] = { x: r.left - left, y: r.top, w: r.width };
+        next[id] = { x: r.left - left, y: r.top - top, w: r.width };
       });
       setBoxes(next);
       setWidth(el.clientWidth);
     };
     measure();
+    setFont((f) => ({ ...f, family: getComputedStyle(el).fontFamily }));
+    document.fonts?.ready.then(() => {
+      setFont((f) => ({ ...f, ready: f.ready + 1 }));
+      measure();
+    });
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     boxRefs.current.forEach((b) => ro.observe(b));
     return () => ro.disconnect();
   }, [categories]);
 
-  // Boxes on more than one row (phones): no skill row, so the strip's height never changes.
-  const wrapped = new Set(Object.values(boxes).map((b) => Math.round(b.y))).size > 1;
-  const top = CONNECT;
-  const placed = useMemo(() => {
-    if (!shown?.length || !width || wrapped) return { items: [], rows: 0 };
-    const set = new Set(shown);
-    const groups = categories
-      .map((cat) => ({ cat, skills: cat.skills.filter((s) => set.has(s.key)).map((s) => ({ key: s.key, label: s.label })) }))
-      .filter((g) => g.skills.length);
-    return placeSkills(groups, boxes, width, wrapped);
-  }, [shown, categories, boxes, width, wrapped]);
+  const widthOf = useMemo(() => {
+    if (!font.family || typeof document === "undefined") return null;
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!ctx) return null;
+    ctx.font = `${CHIP_FONT} ${font.family}`;
+    const cache = new Map<string, number>();
+    return (s: string) => {
+      let w = cache.get(s);
+      if (w === undefined) cache.set(s, (w = Math.ceil(ctx.measureText(s).width) + CHIP_EXTRA));
+      return w;
+    };
+  }, [font]);
 
+  // Pills on more than one row (phones): skills flow under them, no curves.
+  const wrapped = new Set(Object.values(boxes).map((b) => Math.round(b.y))).size > 1;
+  const top = wrapped ? GAP : CONNECT;
+  const groupsFor = useMemo(
+    () => (keys: string[]) => {
+      const set = new Set(keys);
+      return categories
+        .map((cat) => ({ cat, skills: cat.skills.filter((s) => set.has(s.key)).map((s) => ({ key: s.key, label: s.label })) }))
+        .filter((g) => g.skills.length);
+    },
+    [categories],
+  );
+  const ready = !!width && !!widthOf;
+  const placed = useMemo(
+    () => (ready && shown?.length ? placeSkills(groupsFor(shown), boxes, width, wrapped, widthOf!) : { items: [], rows: 0 }),
+    [ready, shown, groupsFor, boxes, width, wrapped, widthOf],
+  );
+  // The most rows any project needs here, so the strip's height never depends on which one is open.
+  const rows = useMemo(
+    () => (ready ? Math.max(1, ...reserve.map((keys) => placeSkills(groupsFor(keys), boxes, width, wrapped, widthOf!).rows)) : 1),
+    [ready, reserve, groupsFor, boxes, width, wrapped, widthOf],
+  );
+  const subH = top + rows * ROW_H - (ROW_H - ITEM_H);
   const pulseCat = pulse ? categories.find((c) => c.skills.some((s) => s.key === pulse.id))?.id : undefined;
-  // One row is always reserved (laptop/tablet); phones have none. Only a project needing more rows than
-  // fit would grow it.
-  const subH = wrapped ? 0 : top + Math.max(1, placed.rows) * ROW_H;
   const ease = [0.22, 1, 0.36, 1] as const;
 
   return (
-    // A narrow strip (small tablets) trades each box's colour square for a colour bar along its top,
-    // so every label still fits on one line.
     <div ref={wrap} className="@container relative">
-      <h2 id="skills-title" className="sr-only">
-        {t.chart.title}
-      </h2>
-      <ul className="flex flex-wrap gap-1.5" aria-label={t.chart.families}>
+      {/* Laptop/tablet: one justified row. Phones: a centred cloud over a few rows. */}
+      <ul className="flex flex-wrap gap-1.5 @max-[560px]:justify-center" aria-label={t.chart.families}>
         {categories.map((c) => {
           const on = !!lit?.has(c.id);
           return (
@@ -168,96 +199,93 @@ export default function SkillStrip({
               }}
               data-cat-box={c.id}
               aria-label={t.chart.family(c.label, c.skills.length)}
-              className="relative flex min-w-0 flex-auto items-center justify-center gap-1.5 border border-(--b) px-2 py-1.5 text-center font-mono text-[10.5px] leading-tight whitespace-nowrap transition-[background-color,border-color,color] duration-500 @max-[690px]:border-t-2 @max-[690px]:border-t-(--c) @max-[690px]:px-1.5 @max-[690px]:pt-[5px]"
+              onPointerEnter={(e) => e.pointerType === "mouse" && onFamilyHover(c.id)}
+              onPointerLeave={(e) => e.pointerType === "mouse" && onFamilyHover(null)}
+              className="relative flex h-8 min-w-0 flex-auto cursor-default items-center justify-center gap-1.5 rounded-full border px-2.5 text-[12px] font-medium tracking-tight whitespace-nowrap transition-[background-color,border-color,color] duration-300 @max-[560px]:h-7 @max-[560px]:flex-none"
               style={{
-                visibility: hideBoxes ? "hidden" : undefined,
-                ["--c" as string]: c.color,
-                ["--b" as string]: on ? c.color : "var(--color-line)",
-                background: on ? `color-mix(in srgb, ${c.color} 9%, white)` : "white",
-                color: lit && !on ? "var(--color-ink-2)" : "var(--color-ink)",
+                background: on ? mix(c.color, 12) : "white",
+                borderColor: on ? mix(c.color, 45) : "var(--color-line)",
+                color: on ? "var(--color-ink)" : "var(--color-ink-2)",
               }}
             >
-              <span className="size-[7px] shrink-0 @max-[690px]:hidden" style={{ background: c.color }} aria-hidden />
-              <span className="min-w-0">{c.label}</span>
-              {pulseCat === c.id && <span key={pulse!.key} aria-hidden className="box-ping absolute -inset-px border" style={{ borderColor: c.color }} />}
+              <span className="size-2 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
+              {c.label}
+              {pulseCat === c.id && <span key={pulse!.key} aria-hidden className="box-ping absolute -inset-px rounded-full border" style={{ borderColor: c.color }} />}
             </li>
           );
         })}
       </ul>
 
-      {/* The open project's skills, under their families */}
-      <motion.div
-        initial={false}
-        animate={{ height: subH }}
-        transition={reduce ? { duration: 0 } : { duration: 0.35, ease }}
-        className="relative overflow-hidden"
-        aria-live="polite"
-      >
+      {/* The open project's skills, under their families. Always the same height. */}
+      <div className="relative" style={{ height: subH }} aria-live="polite">
         <AnimatePresence>
-          {!wrapped && !placed.items.length && (
+          {!placed.items.length && (
             <motion.p
               key="hint"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, transition: { duration: 0.3, delay: 0.15 } }}
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              className="absolute inset-x-0 font-mono text-[10.5px] text-ink-3"
-              style={{ top: top + 4 }}
+              className="absolute inset-x-0 text-[12px] tracking-tight text-ink-3 @max-[560px]:text-center"
+              style={{ top: (subH - 18) / 2 }}
             >
               {t.chart.stripHint}
             </motion.p>
           )}
         </AnimatePresence>
-        <svg aria-hidden className="pointer-events-none absolute inset-0 overflow-visible" width={width} height={Math.max(subH, 1)}>
-          <AnimatePresence>
-            {placed.items.map((it) => {
-              const b = boxes[it.cat];
-              if (!b || wrapped) return null;
-              const bx = b.x + b.w / 2;
-              const sx = it.x + it.w / 2;
-              const y1 = CONNECT + it.row * ROW_H;
-              const d = `M${bx},0 C${bx},${y1 * 0.6} ${sx},${y1 * 0.4} ${sx},${y1}`;
-              return (
-                <motion.path
-                  key={it.key}
-                  d={d}
-                  fill="none"
-                  stroke={it.color}
-                  strokeWidth={1}
-                  initial={reduce ? false : { pathLength: 0, opacity: 0 }}
-                  animate={{ d, pathLength: 1, opacity: 0.8 }}
-                  exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                  transition={{ duration: reduce ? 0 : 0.45, ease }}
-                />
-              );
-            })}
-          </AnimatePresence>
-        </svg>
+        {!wrapped && (
+          <svg aria-hidden className="pointer-events-none absolute inset-0 overflow-visible" width={width} height={subH}>
+            <AnimatePresence>
+              {placed.items.map((it) => {
+                const b = boxes[it.cat];
+                if (!b) return null;
+                const bx = b.x + b.w / 2;
+                const sx = it.x + it.w / 2;
+                const y1 = CONNECT + it.row * ROW_H;
+                const d = `M${bx},0 C${bx},${y1 * 0.6} ${sx},${y1 * 0.4} ${sx},${y1}`;
+                return (
+                  <motion.path
+                    key={it.key}
+                    d={d}
+                    fill="none"
+                    stroke={it.color}
+                    strokeWidth={1.25}
+                    strokeLinecap="round"
+                    initial={reduce ? false : { pathLength: 0, opacity: 0 }}
+                    animate={{ d, pathLength: 1, opacity: 0.45 }}
+                    exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                    transition={{ duration: reduce ? 0 : 0.45, ease }}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </svg>
+        )}
         <ul aria-label={t.chart.title}>
           <AnimatePresence>
             {placed.items.map((it, i) => (
               <motion.li
                 key={it.key}
-                initial={reduce ? false : { opacity: 0, x: it.x, y: top + it.row * ROW_H - 6 }}
+                initial={reduce ? false : { opacity: 0, x: it.x, y: top + it.row * ROW_H + 4 }}
                 animate={{ opacity: 1, x: it.x, y: top + it.row * ROW_H }}
                 exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                transition={{ duration: reduce ? 0 : 0.4, ease, delay: reduce ? 0 : 0.06 + i * 0.03 }}
+                transition={{ duration: reduce ? 0 : 0.4, ease, delay: reduce ? 0 : 0.05 + i * 0.03 }}
                 className="absolute top-0 left-0"
                 style={{ width: it.w, height: ITEM_H }}
               >
                 <span
                   aria-label={t.chart.skill(it.label, usage[it.key] ?? 0)}
-                  className="relative flex h-full items-center gap-1.5 border bg-white px-1.5 font-mono text-[10.5px] whitespace-nowrap text-ink"
-                  style={{ borderColor: it.color }}
+                  className="relative flex h-full items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] font-medium tracking-tight whitespace-nowrap text-ink"
+                  style={{ background: mix(it.color, 8), borderColor: mix(it.color, 32) }}
                 >
-                  <span className="size-1.5 shrink-0" style={{ background: it.color }} aria-hidden />
+                  <span className="size-1.5 shrink-0 rounded-full" style={{ background: it.color }} aria-hidden />
                   {it.label}
-                  {pulse?.id === it.key && <span key={pulse.key} aria-hidden className="box-ping absolute -inset-px border" style={{ borderColor: it.color }} />}
+                  {pulse?.id === it.key && <span key={pulse.key} aria-hidden className="box-ping absolute -inset-px rounded-full border" style={{ borderColor: it.color }} />}
                 </span>
               </motion.li>
             ))}
           </AnimatePresence>
         </ul>
-      </motion.div>
+      </div>
     </div>
   );
 }

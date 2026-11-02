@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Profile, Skills, Work } from "@/content/types";
-import ChartPanel, { type ChartView } from "./ChartPanel";
+import ChartPanel from "./ChartPanel";
+import SkillStrip from "./SkillStrip";
 import SectionChips, { type SectionChip } from "./SectionChips";
 import WorkPanel from "./WorkPanel";
 import { useI18n } from "../I18n";
@@ -11,8 +12,9 @@ import { PHONE_QUERY } from "@/lib/media";
 export type SkillMeta = { label: string; color: string; family: string };
 
 /**
- * The one-pager's core, in one column: who Nico is, then the skills map pinned under
- * the header while the work history scrolls beneath it (on laptops/tablets as a slim strip).
+ * The one-pager's core, in one column: who Nico is, the radial skills map, then its legend, the
+ * family strip, which stays pinned under the header (with the section chips) while the work
+ * history scrolls beneath it. Nothing changes form or size while scrolling.
  * Open a project → it's the visitor's focus: its skills stay lit (the strip lays them out) and
  * hovering other projects changes nothing until it's closed. With nothing open, hovering a project
  * lights its skills (strip: tints its families). Hover a skill in the radial chart → the projects
@@ -35,7 +37,6 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
   }, []);
   useEffect(() => () => window.clearTimeout(hoverTimer.current), []);
   const [openSkills, setOpenSkills] = useState<string[] | null>(null);
-  const [view, setView] = useState<{ view: ChartView; instant: boolean }>({ view: "radial", instant: true });
   const [familyHover, setFamilyHover] = useState<string | null>(null);
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
   const [pulse, setPulse] = useState<{ id: string; key: number } | null>(null);
@@ -70,7 +71,8 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
       ].filter((x): x is SectionChip => !!x),
     [work, t],
   );
-  const activeSections = useScrollState(sections, (v, instant) => setView({ view: v, instant }));
+  const activeSections = useScrollState(sections);
+  const reserve = useMemo(() => work.projects.map((p) => p.skills), [work]);
   const litFamilies = useMemo(
     () => (projectSkills ? new Set(skills.categories.filter((c) => c.skills.some((s) => projectSkills.includes(s.key))).map((c) => c.id)) : null),
     [projectSkills, skills],
@@ -99,24 +101,34 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
           </p>
         </div>
 
-        {/* Skills map: pinned under the header */}
-        <div id="pin-block" className="sticky top-(--header-h) z-30 -mx-4 bg-white px-4 pt-2 pb-1 sm:-mx-6 sm:px-6">
+        {/* Radial skills map (scrolls away) */}
+        <div id="chart-block">
           <ChartPanel
-            view={view.view}
-            instant={view.instant}
-            litFamilies={litFamilies}
-            shown={openSkills}
             skills={skills}
             usage={usage}
             profile={profile}
             highlight={highlight}
-            onFamilyHover={setFamilyHover}
             onActiveSkill={setActiveSkill}
             pulse={pulse}
             revealed={revealed}
             onPortraitHover={setHovered}
             onPortraitToggle={() => setPinned((p) => !p)}
           />
+        </div>
+
+        {/* Its legend, the family strip, and the section chips: pinned under the header */}
+        <div id="pin-block" className="group sticky top-(--header-h) z-30 -mx-4 bg-white/85 px-4 pt-2 pb-1 backdrop-blur-md sm:-mx-6 sm:px-6">
+          <div className="rounded-2xl border border-line bg-white p-2.5 transition-shadow max-sm:p-2 duration-300 group-data-[stuck]:shadow-[0_12px_32px_-20px_rgba(10,10,10,0.35)]">
+            <SkillStrip
+              categories={skills.categories}
+              usage={usage}
+              lit={litFamilies}
+              shown={openSkills}
+              reserve={reserve}
+              pulse={pulse}
+              onFamilyHover={setFamilyHover}
+            />
+          </div>
           <SectionChips sections={sections} active={activeSections} />
         </div>
 
@@ -135,31 +147,24 @@ export default function ProfileBoard({ profile, work, skills }: { profile: Profi
 }
 
 /**
- * Follows the scroll: picks the chart's form, sizes the radial one, keeps --stuck-offset (the
- * pinned block's height once stuck, used as the sections' scroll margin) up to date, and reports
- * which section sits under the pinned block.
- *
- * The radial chart (laptop/tablet: as big as the screen allows under the name; phones: compact)
- * turns into the strip when the block reaches the header, and back once the visitor scrolls 40px
- * above that point (the gap stops it flickering at the line).
+ * Follows the scroll: sizes the radial chart (laptop/tablet: as big as fits under the name, with the
+ * strip and chips still on screen; phones: compact), keeps --stuck-offset (the pinned block's
+ * height, used as the sections' scroll margin) up to date, marks the block while it's stuck, and
+ * reports which section sits under it.
  */
-function useScrollState(sections: SectionChip[], onView: (view: ChartView, instant: boolean) => void) {
+function useScrollState(sections: SectionChip[]) {
   const [active, setActive] = useState<string[]>([]);
   const lastKey = useRef("");
-  const viewCb = useRef(onView);
-  viewCb.current = onView;
 
   useEffect(() => {
     const block = document.getElementById("pin-block");
-    if (!block) return;
+    const chartBlock = document.getElementById("chart-block");
+    if (!block || !chartBlock) return;
     const root = document.documentElement;
-    const mounted = performance.now();
     let raf = 0;
     let offset = -1;
     let lastCap = "";
-    let view: ChartView = "radial";
-    let stripH = 0;
-    // Measures --chart-area (the pinned cap) in px.
+    // Measures --chart-area (the smallest the radial chart gets) in px.
     const pinProbe = document.createElement("div");
     pinProbe.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;width:0;height:var(--chart-area)";
     document.body.appendChild(pinProbe);
@@ -167,42 +172,29 @@ function useScrollState(sections: SectionChip[], onView: (view: ChartView, insta
     const update = () => {
       raf = 0;
       const headerH = parseFloat(getComputedStyle(root).getPropertyValue("--header-h")) || 48;
-      const panel = block.querySelector<HTMLElement>("#skills");
       const phone = window.matchMedia(PHONE_QUERY).matches;
-      const restTop = (block.previousElementSibling?.getBoundingClientRect().bottom ?? 0) + window.scrollY;
-      const stickAt = restTop - headerH;
-      const around = panel ? block.offsetHeight - panel.offsetHeight : 0; // chips and padding
-
-      let next = view;
-      if (view === "radial" && window.scrollY >= stickAt - 1) next = "strip";
-      else if (view === "strip" && window.scrollY < stickAt - 40) next = "radial";
-      if (next !== view) {
-        view = next;
-        // Landing mid-page (reload, a link to a section) shouldn't play the flight.
-        viewCb.current(next, performance.now() - mounted < 700);
-      }
+      const restTop = chartBlock.getBoundingClientRect().top + window.scrollY;
 
       if (!phone) {
-        // The radial chart's cap: what's left of the screen under the name (phones keep the compact size).
-        const titleBar = block.querySelector<HTMLElement>("[data-titlebar]");
-        const chrome = around + (titleBar?.offsetHeight ?? 37) + 10;
-        const cap = `${Math.round(Math.max(pinProbe.offsetHeight, Math.min(520, window.innerHeight - restTop - chrome - 16)))}px`;
+        // What's left of the screen under the name once the chart's title, the strip and the chips are counted.
+        const titleBar = chartBlock.querySelector<HTMLElement>("[data-titlebar]");
+        const chrome = (titleBar?.offsetHeight ?? 32) + 6 + block.offsetHeight;
+        const cap = `${Math.round(Math.max(pinProbe.offsetHeight, Math.min(520, window.innerHeight - restTop - chrome - 12)))}px`;
         if (cap !== lastCap) {
           lastCap = cap;
-          block.style.setProperty("--chart-cap", cap);
+          chartBlock.style.setProperty("--chart-cap", cap);
         }
       } else if (lastCap) {
         lastCap = "";
-        block.style.removeProperty("--chart-cap");
+        chartBlock.style.removeProperty("--chart-cap");
       }
-      if (view === "strip" && panel && !panel.querySelector("[data-chart]")) stripH = block.offsetHeight;
-      // Sections land under the strip (its last height, or about its rows of boxes before it's been shown).
-      const pinnedH = view === "strip" || stripH ? stripH || block.offsetHeight : around + (phone ? 84 : 48);
-      const stuck = pinnedH + 8;
+
+      const stuck = block.offsetHeight + 8;
       if (stuck !== offset) {
         offset = stuck;
         root.style.setProperty("--stuck-offset", `${stuck}px`);
       }
+      block.toggleAttribute("data-stuck", block.getBoundingClientRect().top <= headerH + 0.5 && window.scrollY > 0);
 
       // The section whose top has passed the bottom of the pinned block (ties: both).
       const line = headerH + stuck + 24;
@@ -228,6 +220,7 @@ function useScrollState(sections: SectionChip[], onView: (view: ChartView, insta
     window.addEventListener("resize", schedule);
     const ro = new ResizeObserver(schedule);
     ro.observe(block);
+    ro.observe(chartBlock);
     return () => {
       pinProbe.remove();
       cancelAnimationFrame(raf);

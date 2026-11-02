@@ -13,10 +13,9 @@ let navigation = 0;
 
 /**
  * Scrolls a section to just under the pinned block (16px gap, as the scroll margins give), in one
- * continuous movement. Done by hand rather than with a smooth-scroll target: the skills map can
- * fold from the radial chart into the strip mid-way, which moves the section, so each frame aims
- * at where the section is *now* (an ease-out that settles exactly) and it only stops once the fold
- * is over. Touching or wheeling hands control back to the visitor.
+ * continuous ease-out. The pinned block keeps one height, so where the section lands is known up
+ * front; it's re-read every frame anyway, so the scroll still lands exactly if something shifts on
+ * the way (fonts settling). Touching or wheeling hands control back to the visitor.
  */
 function goTo(e: React.MouseEvent, id: string) {
   const block = document.getElementById("pin-block");
@@ -25,6 +24,7 @@ function goTo(e: React.MouseEvent, id: string) {
   e.preventDefault();
   history.replaceState(null, "", `#${id}`);
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 48;
   const run = ++navigation;
   const started = performance.now();
   let stopped = false;
@@ -37,12 +37,11 @@ function goTo(e: React.MouseEvent, id: string) {
   };
   const step = () => {
     if (stopped || run !== navigation) return done();
-    const off = el.getBoundingClientRect().top - block.getBoundingClientRect().bottom - 16;
     const max = document.documentElement.scrollHeight - window.innerHeight;
-    const blocked = (off > 0 && window.scrollY >= max - 0.5) || (off < 0 && window.scrollY <= 0);
-    const folding = !!document.querySelector("[data-flight]");
-    if ((Math.abs(off) < 0.5 || blocked) && !folding) return done();
-    if (performance.now() - started > 3000) return done();
+    // Where the page has to be for the section to sit 16px under the pinned (stuck) block.
+    const target = Math.max(0, Math.min(max, el.getBoundingClientRect().top + window.scrollY - headerH - block.offsetHeight - 16));
+    const off = target - window.scrollY;
+    if (Math.abs(off) < 0.5 || performance.now() - started > 3000) return done();
     // Ease out, but never by less than a pixel (the browser rounds smaller steps away).
     const move = reduce || Math.abs(off) <= 1 ? off : Math.sign(off) * Math.max(1, Math.abs(off) * 0.16);
     window.scrollTo({ top: Math.round(window.scrollY + move), behavior: "instant" });
@@ -82,8 +81,8 @@ export default function SectionChips({ sections, active }: { sections: SectionCh
             data-chip={s.id}
             onClick={(e) => goTo(e, s.id)}
             aria-current={on ? "location" : undefined}
-            className={`shrink-0 border px-2 py-1 font-mono text-[10.5px] tracking-wide uppercase transition-colors ${
-              on ? "border-ink bg-ink text-white" : "border-line text-ink-2 hover:border-ink hover:text-ink"
+            className={`flex h-7 shrink-0 items-center rounded-full border px-3 text-[12px] font-medium tracking-tight transition-colors duration-300 ${
+              on ? "border-ink bg-ink text-white" : "border-line bg-white text-ink-2 hover:border-ink-3 hover:text-ink"
             }`}
           >
             {s.label}

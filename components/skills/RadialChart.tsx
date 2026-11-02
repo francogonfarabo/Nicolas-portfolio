@@ -29,8 +29,6 @@ type Props = {
   fitHeight: boolean;
   /** Fade the chart (the portrait easter egg is showing). */
   dimmed: boolean;
-  /** Hide the family hubs (they're flying back in from the pinned strip). */
-  hideHubs?: boolean;
   renderRoot: (f: Frame) => ReactNode;
   renderOverlay?: (f: Frame) => ReactNode;
   labelledBy: string;
@@ -63,7 +61,6 @@ export default function RadialChart({
   pulse,
   fitHeight,
   dimmed,
-  hideHubs = false,
   renderRoot,
   renderOverlay,
   labelledBy,
@@ -451,7 +448,7 @@ export default function RadialChart({
                   )}
                   {focusId === s.id && <circle cx={p.x} cy={p.y} r={dotR + 5} fill="none" stroke={INK} strokeWidth={1.5} />}
                   {s.kind === "hub" ? (
-                    <circle data-hub={s.categoryId} cx={p.x} cy={p.y} r={dotR} fill="#fff" stroke={s.color} strokeWidth={2} opacity={hideHubs ? 0 : 1} />
+                    <circle data-hub={s.categoryId} cx={p.x} cy={p.y} r={dotR} fill="#fff" stroke={s.color} strokeWidth={2} />
                   ) : (
                     <circle cx={p.x} cy={p.y} r={dotR} fill={s.color} stroke="#fff" strokeWidth={1.5} />
                   )}

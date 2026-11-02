@@ -314,9 +314,9 @@ function ProjectRow({
                 key={k}
                 type="button"
                 onClick={() => onSkillTag(k)}
-                className="inline-flex items-center gap-1.5 border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-ink-2 transition-colors hover:border-ink hover:text-ink"
+                className="inline-flex h-6 items-center gap-1.5 rounded-full border border-line bg-white px-2.5 text-[11.5px] font-medium tracking-tight text-ink-2 transition-colors hover:border-ink-3 hover:text-ink"
               >
-                <span className="size-1.5" style={{ background: s.color }} aria-hidden />
+                <span className="size-1.5 rounded-full" style={{ background: s.color }} aria-hidden />
                 {s.label}
                 <span className="sr-only">{t.work.showInMap}</span>
               </button>
@@ -367,7 +367,7 @@ function ProjectRow({
           <span className="flex items-center gap-3 pt-1.5">
             <span className="hidden gap-[3px] md:flex" aria-hidden>
               {tags.map(([k, s]) => (
-                <span key={k} className="size-[7px]" style={{ background: s.color }} title={s.label} />
+                <span key={k} className="size-[7px] rounded-full" style={{ background: s.color }} title={s.label} />
               ))}
             </span>
             <span aria-hidden className="w-3 font-mono text-[13px] leading-none text-ink-3 group-hover:text-ink">

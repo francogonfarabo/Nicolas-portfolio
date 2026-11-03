@@ -261,6 +261,46 @@ export default function RadialChart({
     kick();
   };
 
+  // Touch: anywhere on the half-disc grabs the nearest node, and that touch doesn't scroll the page
+  // (a native, non-passive touchstart is what iOS respects; touch-action alone isn't, on SVG).
+  // Touches outside it (title, empty corners, the portrait) still scroll. Two fingers still zoom.
+  const onAreaDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" || drag.current || !frame || dimmed) return;
+    const p = local(e);
+    if (!inPlay(frame, p)) return;
+    let best: Slot | undefined;
+    let bestD = Infinity;
+    for (const s of slots) {
+      const q = pos(s.id);
+      const d = Math.hypot(q.x - p.x, q.y - p.y);
+      if (d < bestD) [best, bestD] = [s, d];
+    }
+    if (best) onNodeDown(e, best);
+  };
+  const live = useRef({ frame, scale, dimmed });
+  live.current = { frame, scale, dimmed };
+  const hasFrame = !!frame;
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const start = (e: TouchEvent) => {
+      const { frame: f, scale: k, dimmed: off } = live.current;
+      const t = e.touches[0];
+      if (!f || off || !t || e.touches.length > 1) return;
+      const r = svg.getBoundingClientRect();
+      if (inPlay(f, { x: (t.clientX - r.left) / k, y: (t.clientY - r.top) / k })) e.preventDefault();
+    };
+    const move = (e: TouchEvent) => {
+      if (drag.current && e.touches.length === 1) e.preventDefault();
+    };
+    svg.addEventListener("touchstart", start, { passive: false });
+    svg.addEventListener("touchmove", move, { passive: false });
+    return () => {
+      svg.removeEventListener("touchstart", start);
+      svg.removeEventListener("touchmove", move);
+    };
+  }, [hasFrame]);
+
   const endDrag = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
@@ -336,7 +376,7 @@ export default function RadialChart({
       ref={wrapRef}
       data-chart
       // flow-root keeps the scaled chart's negative margin inside, so the box ends where the chart does.
-      className="relative flow-root w-full select-none"
+      className="relative flow-root w-full select-none [-webkit-touch-callout:none]"
       // Before the first measure (server render), reserve the cap so nothing jumps much.
       style={!frame && fitHeight ? { height: "min(var(--chart-cap, var(--chart-start)), var(--chart-guess))" } : undefined}
     >
@@ -362,6 +402,7 @@ export default function RadialChart({
             aria-labelledby={labelledBy}
             aria-describedby={describedBy}
             className="block overflow-visible transition-opacity duration-500"
+            onPointerDown={onAreaDown}
             onPointerMove={onMove}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
@@ -593,6 +634,9 @@ function Callouts({ frame, items }: { frame: Frame; items: Callout[] }) {
     </g>
   );
 }
+
+/** The half-disc where a touch drags (out to a little past the outer ring, down to the baseline). */
+const inPlay = (f: Frame, p: Vec) => Math.hypot(p.x - f.cx, p.y - f.cy) <= f.r1 + 28 && p.y <= f.cy + 14;
 
 /** Just the frame of the half-disc: the portrait's orbit, the outer edge and the horizon. No scale. */
 function Guides({ frame: f }: { frame: Frame }) {
